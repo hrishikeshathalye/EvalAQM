@@ -1,0 +1,18 @@
+# Python virtual environment files
+venv/
+
+# Python cache files
+__pycache__
+*.pyc
+
+# vscode settings
+.vscode/
+
+# Ignore NeST output
+*_dump/
+
+# logs
+*.log
+
+# Output on nest install
+nitk_nest.egg-info
