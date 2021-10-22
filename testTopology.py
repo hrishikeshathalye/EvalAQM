@@ -1,7 +1,8 @@
 from nest.experiment import *
 from nest.topology import *
+import sys
 
-if __name__ == "__main__":
+def getExp(qdisc):
     
     sources = {}
     dests = {}
@@ -69,7 +70,7 @@ if __name__ == "__main__":
         connections[f'r2_d{i}'].set_attributes('100mbit', '5ms')
         
     #Set attributes for router-router interfaces
-    connections['r1_r2'].set_attributes('10mbit', '40ms')
+    connections['r1_r2'].set_attributes('10mbit', '40ms', qdisc)
     connections['r2_r1'].set_attributes('10mbit', '40ms')
 
     flows = {}
@@ -83,4 +84,13 @@ if __name__ == "__main__":
     for i in flows:
         exp.add_tcp_flow(flows[i])
 
-    exp.run()
+    return exp
+
+if __name__ == "__main__":
+
+    if(len(sys.argv) == 1):
+        qdisc = ''
+    else:
+        qdisc = sys.argv[1]
+
+    getExp(qdisc).run()
