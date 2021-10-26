@@ -10,6 +10,12 @@ __pycache__
 
 # Ignore NeST output
 *_dump/
+noqueue
+pfifo
+fq_pie
+cake
+fq_codel
+cobalt
 
 # logs
 *.log

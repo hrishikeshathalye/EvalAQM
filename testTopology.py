@@ -1,9 +1,14 @@
 from nest.experiment import *
 from nest.topology import *
 import sys
+import os
+import shutil
+import subprocess
+import shlex
+import signal
 
-def getExp(qdisc):
-    
+def getExp(expName, qdisc, tcpdumpProcs):
+
     sources = {}
     dests = {}
     routers = {}
@@ -70,7 +75,10 @@ def getExp(qdisc):
         connections[f'r2_d{i}'].set_attributes('100mbit', '5ms')
         
     #Set attributes for router-router interfaces
-    connections['r1_r2'].set_attributes('10mbit', '40ms', qdisc)
+    if(qdisc != "" and qdisc != "noqueue"):
+        connections['r1_r2'].set_attributes('10mbit', '40ms', qdisc)
+    else:
+        connections['r1_r2'].set_attributes('10mbit', '40ms')
     connections['r2_r1'].set_attributes('10mbit', '40ms')
 
     flows = {}
@@ -79,18 +87,71 @@ def getExp(qdisc):
     for i in range(1, 6):
         flows[f's{i}_r1'] = Flow(sources[i], dests[i], connections[f'd{i}_r2'].address, 0, 60, 1)
 
-    exp = Experiment('basicTopology')
+    exp = Experiment(expName)
+    if(qdisc != "" and qdisc != "noqueue"):
+        exp.require_qdisc_stats(connections['r1_r2'])
 
     for i in flows:
         exp.add_tcp_flow(flows[i])
 
+    for i in range(1, 6):
+        with dests[i]:
+            # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
+            cmd = f"tcpdump -i {connections[f'd{i}_r2'].id} -w - --immediate-mode -U"
+            proc = subprocess.Popen(
+                shlex.split(cmd),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
+            tcpdumpProcs[f'd{i}_r2'] = proc
+    with routers[1]:
+        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w - --immediate-mode -U"
+        proc = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        tcpdumpProcs['r1_r2'] = proc
+    with routers[2]:
+        cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w - --immediate-mode -U"
+        proc = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        tcpdumpProcs['r2_r1'] = proc
+
     return exp
 
+def runExp(qdisc):
+
+    tcpdumpProcs = {}
+
+    getExp(qdisc, qdisc, tcpdumpProcs).run()
+    
+    for filename in os.listdir():
+        if(qdisc in filename and filename.endswith("_dump")):
+            os.rename(filename, qdisc)
+
+    os.mkdir(f"{qdisc}/tcpdump")
+
+    print("Waiting to write pcap files...")
+
+    for i in tcpdumpProcs:
+        tcpdumpProcs[i].terminate()
+        (tcpdumpOut, _) = tcpdumpProcs[i].communicate()
+        with open(f"{qdisc}/tcpdump/{i}.pcap", "wb") as f:
+            f.write(tcpdumpOut)
+
 if __name__ == "__main__":
+    
+    subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    if(len(sys.argv) == 1):
-        qdisc = ''
-    else:
-        qdisc = sys.argv[1]
+    qdiscs = ["noqueue","pfifo","fq_pie","fq_codel","cobalt","cake"]
 
-    getExp(qdisc).run()
+    for qdisc in qdiscs:
+        try:
+            shutil.rmtree(qdisc)
+        except FileNotFoundError:
+            pass
+        runExp(qdisc)
