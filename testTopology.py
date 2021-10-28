@@ -98,7 +98,7 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
     for i in range(1, 6):
         with dests[i]:
             # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
-            cmd = f"tcpdump -i {connections[f'd{i}_r2'].id} -w - --immediate-mode -U"
+            cmd = f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/d{i}_r2.pcap"
             proc = subprocess.Popen(
                 shlex.split(cmd),
                 stdout=subprocess.PIPE,
@@ -106,7 +106,7 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
             )
             tcpdumpProcs[f'd{i}_r2'] = proc
     with routers[1]:
-        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w - --immediate-mode -U"
+        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/r1_r2.pcap"
         proc = subprocess.Popen(
             shlex.split(cmd),
             stdout=subprocess.PIPE,
@@ -114,7 +114,7 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
         )
         tcpdumpProcs['r1_r2'] = proc
     with routers[2]:
-        cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w - --immediate-mode -U"
+        cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
         proc = subprocess.Popen(
             shlex.split(cmd),
             stdout=subprocess.PIPE,
@@ -127,22 +127,22 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
 def runExp(qdisc, argsDict):
 
     tcpdumpProcs = {}
+    
+    os.umask(0)
+    os.mkdir("tcpdump", mode=0o777)
 
     getExp(qdisc, qdisc, tcpdumpProcs, argsDict).run()
-    
+
     for filename in os.listdir():
         if(qdisc in filename and filename.endswith("_dump")):
             os.rename(filename, qdisc)
-
-    os.mkdir(f"{qdisc}/tcpdump")
 
     print("Waiting to write pcap files...")
 
     for i in tcpdumpProcs:
         tcpdumpProcs[i].terminate()
-        (tcpdumpOut, _) = tcpdumpProcs[i].communicate()
-        with open(f"{qdisc}/tcpdump/{i}.pcap", "wb") as f:
-            f.write(tcpdumpOut)
+    
+    shutil.move("tcpdump", f"{qdisc}/tcpdump")
 
 def myArgumentParser() :
     argsDict = {}
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["noqueue","pfifo","fq_pie","fq_codel","cobalt","cake"]
+    qdiscs = ["pfifo","fq_pie","fq_codel","cobalt","cake"]
 
     for qdisc in qdiscs:
         try:
