@@ -6,8 +6,9 @@ import shutil
 import subprocess
 import shlex
 import signal
+import argparse
 
-def getExp(expName, qdisc, tcpdumpProcs):
+def getExp(expName, qdisc, tcpdumpProcs, argsDict):
 
     sources = {}
     dests = {}
@@ -68,18 +69,18 @@ def getExp(expName, qdisc, tcpdumpProcs):
     #Set attributes for node-router interfaces
     for i in range(1, 6):
         #Source - Router
-        connections[f's{i}_r1'].set_attributes('100mbit', '5ms')
-        connections[f'r1_s{i}'].set_attributes('100mbit', '5ms')
+        connections[f's{i}_r1'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
+        connections[f'r1_s{i}'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
         #Destination - Router
-        connections[f'd{i}_r2'].set_attributes('100mbit', '5ms')
-        connections[f'r2_d{i}'].set_attributes('100mbit', '5ms')
+        connections[f'd{i}_r2'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
+        connections[f'r2_d{i}'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
         
     #Set attributes for router-router interfaces
     if(qdisc != "" and qdisc != "noqueue"):
-        connections['r1_r2'].set_attributes('10mbit', '40ms', qdisc)
+        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc)
     else:
-        connections['r1_r2'].set_attributes('10mbit', '40ms')
-    connections['r2_r1'].set_attributes('10mbit', '40ms')
+        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
+    connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
 
     flows = {}
 
@@ -123,11 +124,11 @@ def getExp(expName, qdisc, tcpdumpProcs):
 
     return exp
 
-def runExp(qdisc):
+def runExp(qdisc, argsDict):
 
     tcpdumpProcs = {}
 
-    getExp(qdisc, qdisc, tcpdumpProcs).run()
+    getExp(qdisc, qdisc, tcpdumpProcs, argsDict).run()
     
     for filename in os.listdir():
         if(qdisc in filename and filename.endswith("_dump")):
@@ -143,9 +144,78 @@ def runExp(qdisc):
         with open(f"{qdisc}/tcpdump/{i}.pcap", "wb") as f:
             f.write(tcpdumpOut)
 
+def myArgumentParser() :
+    argsDict = {}
+    parser = argparse.ArgumentParser()
+
+    #Add the optional arguements to the arguement class of program.
+    parser.add_argument("--RtoRdelay", help="Enter latency for router to router link")
+    parser.add_argument("--HtoRdelay", help="Enter latency for host to router link")
+    parser.add_argument("--RtoRbandwidth", help="Enter bandwidth for router to router link")
+    parser.add_argument("--HtoRbandwidth", help="Enter bandwidth for host to router link")
+    parser.add_argument("--AppArmorFlag", type=int, help="Enter 1 to disable app armor")
+    args = parser.parse_args()
+    
+    #Check for each optional arguement.
+    #If arguement not passed, set the default values.
+    if args.RtoRdelay :
+        if args.RtoRdelay.isdigit() == True :
+            argsDict["RtoRdelay"] = args.RtoRdelay + 'ms'
+        else :
+            print("Invalid RtoRdelay value.... moving to defaults.... 40ms")
+            argsDict["RtoRdelay"] = '40ms'
+    else :
+        print("Setting default router to router delay 40ms....")
+        argsDict["RtoRdelay"] = '40ms'
+    if args.RtoRbandwidth :
+        if args.RtoRbandwidth.isdigit() == True : 
+            argsDict["RtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
+        else : 
+            print("Invalid RtoRbancwidth value.... moving to defaults.... 10mbit")
+            argsDict["RtoRbandwidth"] = '10mbit'
+    else :
+        print("Setting default router to router bandwidth 10mbit....")
+        argsDict["RtoRbandwidth"] = '10mbit'
+    
+    if args.HtoRdelay :
+        if args.HtoRdelay.isdigit() == True :
+            argsDict["HtoRdelay"] = args.HtoRdelay + 'ms'
+        else :
+            print("Invalid HtoRdelay value.... moving to defaults.... 5ms")
+            argsDict["HtoRdelay"] = '5ms'
+    else :
+        print("Setting default host to router delay 5ms....")
+        argsDict["HtoRdelay"] = '5ms'
+    if args.HtoRbandwidth :
+        if args.HtoRbandwidth.isdigit() == True :
+            argsDict["HtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
+        else :
+            print("Invalid HtoRbandwidth.... moving to defaults.... 100mbit")
+            argsDict["HtoRbandwidth"] = '100mbit'
+    else :
+        print("Setting default host to router bandwidth 100mbit....")
+        argsDict["HtoRbandwidth"] = '100mbit'
+    
+    if args.AppArmorFlag :
+        if args.AppArmorFlag == 1 :
+            argsDict['AppArmorFlag'] = 1
+        else : 
+            print("Invalid App Armor Flag value.... moving to defaults.... 0")
+            argsDict['AppArmorFlag'] = 0
+    else :
+        print("App armor flag not set....")
+        argsDict['AppArmorFlag'] = 0
+    #Return the final dictionary of arguements with their values set.
+    return argsDict
+
+
 if __name__ == "__main__":
     
-    subprocess.call(['sh', './scripts/disableAppArmor.sh'])
+    argsDict = myArgumentParser()
+    print("Argument dictionary is : ", argsDict)
+    
+    if argsDict['AppArmorFlag'] == 1 :
+        subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
     qdiscs = ["noqueue","pfifo","fq_pie","fq_codel","cobalt","cake"]
 
@@ -154,4 +224,4 @@ if __name__ == "__main__":
             shutil.rmtree(qdisc)
         except FileNotFoundError:
             pass
-        runExp(qdisc)
+        runExp(qdisc, argsDict)
