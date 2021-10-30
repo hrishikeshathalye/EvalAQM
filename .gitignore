@@ -16,6 +16,7 @@ fq_pie
 cake
 fq_codel
 cobalt
+fq_minstrel_pie
 
 # logs
 *.log

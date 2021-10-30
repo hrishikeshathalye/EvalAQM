@@ -76,8 +76,20 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
         connections[f'r2_d{i}'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
         
     #Set attributes for router-router interfaces
+    qdiscParams = {}
+    if(qdisc == "fq_minstrel_pie"):
+        qdiscParams['minstrel'] = ""
+    if(qdisc == "cobalt"):
+        qdisc = "cake"
+        qdiscParams["unlimited"] = ""
+        qdiscParams["raw"] = ""
+        qdiscParams["besteffort"] = ""
+        qdiscParams["flowblind"] = ""
+        qdiscParams["no-ack-filter"] = ""
+        qdiscParams["rtt"] = "20ms"
+        qdiscParams["memlimit"] = "400KB"
     if(qdisc != "" and qdisc != "noqueue"):
-        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc)
+        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc, **qdiscParams)
     else:
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
     connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
@@ -89,6 +101,7 @@ def getExp(expName, qdisc, tcpdumpProcs, argsDict):
         flows[f's{i}_r1'] = Flow(sources[i], dests[i], connections[f'd{i}_r2'].address, 0, 60, 1)
 
     exp = Experiment(expName)
+
     if(qdisc != "" and qdisc != "noqueue"):
         exp.require_qdisc_stats(connections['r1_r2'])
 
@@ -217,7 +230,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["pfifo","fq_pie","fq_codel","cobalt","cake"]
+    qdiscs = ["pfifo","fq_codel","fq_pie","fq_minstrel_pie","cobalt","cake"]
 
     for qdisc in qdiscs:
         try:
