@@ -79,8 +79,8 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, sshPr
     qdiscParams = {}
     if(qdisc == "fq_minstrel_pie"):
         qdiscParams['minstrel'] = ""
-    if(qdisc == "cobalt"):
-        qdisc = "cake"
+        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'fq_pie', **qdiscParams)
+    elif(qdisc == "cobalt"):
         qdiscParams["unlimited"] = ""
         qdiscParams["raw"] = ""
         qdiscParams["besteffort"] = ""
@@ -88,7 +88,8 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, sshPr
         qdiscParams["no-ack-filter"] = ""
         qdiscParams["rtt"] = "20ms"
         qdiscParams["memlimit"] = "400KB"
-    if(qdisc != "" and qdisc != "noqueue"):
+        connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'cake', **qdiscParams)
+    elif(qdisc != "" and qdisc != "noqueue"):
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc, **qdiscParams)
     else:
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
