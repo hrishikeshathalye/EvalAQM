@@ -8,7 +8,7 @@ import shlex
 import signal
 import argparse
 
-def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, sshProcs, argsDict):
+def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs , sshProcs, argsDict):
 
     sources = {}
     dests = {}
@@ -133,18 +133,46 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, sshPr
                 stderr=subprocess.DEVNULL
             )
             netServerProcs[f'd{i}_r2'] = proc
+            cmd = f"python scripts/ditg-control-server.py -a 0.0.0.0 --insecure-xml > ditg-control-server-{i}.log"
+            proc = subprocess.Popen(
+                shlex.split(cmd),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
+            ditgControlServerProcs[f'd{i}_r2'] = proc
         with sources[i]:
             # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
             os.mkdir(f'{qdisc}/s{i}_r1')
-            cmd = (
-            f"flent tcp_1up "
-            f" -D {qdisc}/s{i}_r1"
-            f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-	        f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
-            f" --length 60"
-            f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-            " --socket-stats"
-            )   
+            if(i == 1):
+                cmd = (
+                f"flent voip "
+                f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --length 60"
+                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                " --socket-stats"
+                )
+            elif(i == 2):
+                cmd = (
+                f"flent csa "
+                f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --length 60"
+                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                " --socket-stats"
+                )
+            else:
+                cmd = (
+                f"flent tcp_1up "
+                f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --length 60"
+                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                " --socket-stats"
+                )
             proc = subprocess.Popen(
                 shlex.split(cmd),
                 stdout=subprocess.PIPE,
@@ -158,12 +186,13 @@ def runExp(qdisc, argsDict):
     netServerProcs = {}
     flentClientProcs = {}
     sshProcs = {}
+    ditgControlServerProcs = {}
     
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
     os.mkdir("tcpdump", mode=0o777)
 
-    getExp(qdisc, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, sshProcs, argsDict)
+    getExp(qdisc, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs, sshProcs, argsDict)
 
     for filename in os.listdir():
         if(qdisc in filename and filename.endswith("_dump")):
@@ -182,7 +211,9 @@ def runExp(qdisc, argsDict):
     print("Waiting to write pcap files...")
     for i in tcpdumpProcs:
         tcpdumpProcs[i].terminate()
-    
+    for i in ditgControlServerProcs:
+        ditgControlServerProcs[i].terminate()
+
     shutil.move("tcpdump", f"{qdisc}/tcpdump")
 
 def myArgumentParser() :

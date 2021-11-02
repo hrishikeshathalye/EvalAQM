@@ -17,6 +17,7 @@ cake
 fq_codel
 cobalt
 fq_minstrel_pie
+flent
 
 # logs
 *.log
