@@ -8,7 +8,7 @@ import shlex
 import signal
 import argparse
 
-def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs , sshProcs, argsDict):
+def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs , webServerProcs, sshProcs, argsDict):
 
     sources = {}
     dests = {}
@@ -54,7 +54,7 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
     connections[f'r1_r2'].set_address('10.1.0.1/24')
     connections[f'r2_r1'].set_address('10.1.0.2/24')
 
-    #Set node routing tables
+    #Set node routing tables{connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}
     for i in range(1, 6):
         sources[i].add_route("DEFAULT", connections[f's{i}_r1'])
         dests[i].add_route("DEFAULT", connections[f'd{i}_r2'])
@@ -140,6 +140,14 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
                 stderr=subprocess.DEVNULL
             )
             ditgControlServerProcs[f'd{i}_r2'] = proc
+            if(i == 3):
+                cmd = f"python3 -m http.server --bind 0.0.0.0 1234"
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
+                webServerProcs[f'd{i}_r2'] = proc
         with sources[i]:
             # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
             os.mkdir(f'{qdisc}/s{i}_r1')
@@ -163,10 +171,32 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
-            else:
+            elif(i == 3):
+                cmd = (
+                f"flent http "
+                f" --http-getter-urllist=urls.txt"
+                f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --length 60"
+                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                " --socket-stats"
+                )
+            elif(i == 4):
                 cmd = (
                 f"flent tcp_1up "
                 f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --length 60"
+                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                " --socket-stats"
+                )
+            elif(i == 5):
+                cmd = (
+                f"flent udp_flood "
+                f" -D {qdisc}/s{i}_r1"
+                f" --test-parameter udp_bandwidth=1M"
                 f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
                 f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
@@ -187,12 +217,13 @@ def runExp(qdisc, argsDict):
     flentClientProcs = {}
     sshProcs = {}
     ditgControlServerProcs = {}
+    webServerProcs = {}
     
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
     os.mkdir("tcpdump", mode=0o777)
 
-    getExp(qdisc, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs, sshProcs, argsDict)
+    getExp(qdisc, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs, webServerProcs, sshProcs, argsDict)
 
     for filename in os.listdir():
         if(qdisc in filename and filename.endswith("_dump")):
@@ -213,6 +244,8 @@ def runExp(qdisc, argsDict):
         tcpdumpProcs[i].terminate()
     for i in ditgControlServerProcs:
         ditgControlServerProcs[i].terminate()
+    for i in webServerProcs:
+        webServerProcs[i].terminate()
 
     shutil.move("tcpdump", f"{qdisc}/tcpdump")
 
