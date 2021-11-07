@@ -18,6 +18,7 @@ fq_codel
 cobalt
 fq_minstrel_pie
 flent
+tcpdump
 
 # logs
 *.log

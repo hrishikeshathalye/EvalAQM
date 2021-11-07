@@ -8,7 +8,7 @@ import shlex
 import signal
 import argparse
 
-def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs , webServerProcs, sshProcs, argsDict):
+def getExp(expName, qdisc, procsDict, argsDict):
 
     sources = {}
     dests = {}
@@ -102,13 +102,13 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        tcpdumpProcs['r1_r2'] = proc
+        procsDict['tcpdumpProcs']['r1_r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        sshProcs['r1_r2'] = proc
+        procsDict['sshProcs']['r1_r2'] = proc
     with routers[2]:
         cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
         proc = subprocess.Popen(
@@ -116,40 +116,34 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        tcpdumpProcs['r2_r1'] = proc
+        procsDict['tcpdumpProcs']['r2_r1'] = proc
     for i in range(1, 6):
         with dests[i]:
-            # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
-            cmd = f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/d{i}_r2.pcap"
-            proc = subprocess.Popen(
-                shlex.split(cmd),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
-            tcpdumpProcs[f'd{i}_r2'] = proc
-            proc = subprocess.Popen(
-                ['netserver'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
-            netServerProcs[f'd{i}_r2'] = proc
-            cmd = f"python scripts/ditg-control-server.py -a 0.0.0.0 --insecure-xml > ditg-control-server-{i}.log"
-            proc = subprocess.Popen(
-                shlex.split(cmd),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
-            ditgControlServerProcs[f'd{i}_r2'] = proc
-            if(i == 3):
-                cmd = f"python3 -m http.server --bind 0.0.0.0 1234"
+            #List of commands to be run on all destinations
+            destCmds = {
+                #tcpdump
+                'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/d{i}_r2.pcap",
+                #ditg server
+                'ditgControlServerProcs':f"python scripts/ditg-control-server.py -a {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} --insecure-xml",
+                #netperf server
+                'netServerProcs':f"netserver -4",
+                #http server
+                'webServerProcs':f"python3 -m http.server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} 1234",
+                #iperf udp server
+                'iperfUdpServerProcs':f"iperf --server --udp --udp-histogram --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
+                #iperf tcp server
+                'iperfTcpServerProcs':f"iperf --server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
+                #irtt server
+                'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+            }
+            for procName, cmd in destCmds.items():
                 proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL
                 )
-                webServerProcs[f'd{i}_r2'] = proc
+                procsDict[procName][f'd{i}_r2'] = proc
         with sources[i]:
-            # cmd = f"sudo tshark -i {connections[f'd{i}_r2'].id} -w - -a timeout:70"
             os.mkdir(f'{qdisc}/s{i}_r1')
             if(i == 1):
                 cmd = (
@@ -175,6 +169,7 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
                 cmd = (
                 f"flent http "
                 f" --http-getter-urllist=urls.txt"
+                f" --http-getter-workers=1"
                 f" -D {qdisc}/s{i}_r1"
                 f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
                 f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
@@ -196,7 +191,6 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter udp_bandwidth=1M"
                 f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
                 f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
@@ -208,44 +202,44 @@ def getExp(expName, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgC
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL
             )
-            flentClientProcs[f's{i}_r1'] = proc
+            procsDict['flentClientProcs'][f's{i}_r1'] = proc
 
 def runExp(qdisc, argsDict):
-
-    tcpdumpProcs = {}
-    netServerProcs = {}
-    flentClientProcs = {}
-    sshProcs = {}
-    ditgControlServerProcs = {}
-    webServerProcs = {}
+    procsDict={
+        'tcpdumpProcs': {},
+        'netServerProcs' : {},
+        'flentClientProcs' : {},
+        'sshProcs' : {},
+        'ditgControlServerProcs' : {},
+        'webServerProcs' : {},
+        'iperfUdpServerProcs': {},
+        'iperfTcpServerProcs': {},
+        'irttServerProcs': {}
+    }
     
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
-    os.mkdir("tcpdump", mode=0o777)
+    try:
+        os.mkdir("tcpdump", mode=0o777)
+    except FileExistsError:
+        shutil.rmtree("tcpdump")
+        os.mkdir("tcpdump", mode=0o777)
 
-    getExp(qdisc, qdisc, tcpdumpProcs, netServerProcs, flentClientProcs, ditgControlServerProcs, webServerProcs, sshProcs, argsDict)
+    getExp(qdisc, qdisc, procsDict, argsDict)
 
     for filename in os.listdir():
         if(qdisc in filename and filename.endswith("_dump")):
             os.rename(filename, qdisc)
     
     print(f"Waiting for test {qdisc} to complete...")
-    for i in flentClientProcs:
-        flentClientProcs[i].communicate()
-        flentClientProcs[i].terminate()
-    print("Waiting for server to shutdown...")
-    for i in netServerProcs:
-        netServerProcs[i].communicate()
-        netServerProcs[i].terminate()
-    for i in sshProcs:
-        sshProcs[i].terminate()
-    print("Waiting to write pcap files...")
-    for i in tcpdumpProcs:
-        tcpdumpProcs[i].terminate()
-    for i in ditgControlServerProcs:
-        ditgControlServerProcs[i].terminate()
-    for i in webServerProcs:
-        webServerProcs[i].terminate()
+    for i in procsDict['flentClientProcs']:
+        procsDict['flentClientProcs'][i].communicate()
+        procsDict['flentClientProcs'][i].terminate()
+    print("Waiting for server processes to shutdown...")
+    for i in procsDict:
+        if(i != 'flentClientProcs'):
+            for j in procsDict[i]:
+                procsDict[i][j].terminate()
 
     shutil.move("tcpdump", f"{qdisc}/tcpdump")
 
