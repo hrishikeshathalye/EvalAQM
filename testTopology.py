@@ -191,7 +191,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter udp_bandwidth=1M"
                 f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
                 f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
