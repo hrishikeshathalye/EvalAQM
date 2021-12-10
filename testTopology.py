@@ -109,6 +109,20 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
         )
         procsDict['sshProcs']['r1_r2'] = proc
+        os.mkdir(f'{qdisc}/disc_stats')
+        cmd = (
+            f"flent qdisc-stats "
+            f" -D {qdisc}/disc_stats"
+            f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
+            f" --length 80"
+            f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+        )
+        proc = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        procsDict['flentClientProcs'][f'r1_r2'] = proc
     with routers[2]:
         cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
         proc = subprocess.Popen(
@@ -149,8 +163,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent voip "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
@@ -159,8 +171,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent csa "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
@@ -171,8 +181,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 f" --http-getter-urllist=urls.txt"
                 f" --http-getter-workers=1"
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
@@ -181,8 +189,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent tcp_1up "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
                 f" --length 60"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
@@ -191,8 +197,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter qdisc_stats_hosts={connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-                f" --test-parameter qdisc_stats_interfaces={connections[f'r1_r2'].ifb.id}"
+                f" --test-parameter udp_bandwidth=10M"
                 f" --length 60"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
