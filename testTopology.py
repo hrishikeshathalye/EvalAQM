@@ -114,7 +114,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
             f"flent qdisc-stats "
             f" -D {qdisc}/disc_stats"
             f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
-            f" --length 80"
+            f" --length 320"
             f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
         )
         proc = subprocess.Popen(
@@ -163,15 +163,15 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent voip "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 60"
+                f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
             elif(i == 2):
                 cmd = (
-                f"flent csa "
+                f"flent quake "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 60"
+                f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -181,7 +181,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 f" --http-getter-urllist=urls.txt"
                 f" --http-getter-workers=1"
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 60"
+                f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -189,7 +189,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent tcp_1up "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 60"
+                f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -197,8 +197,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter udp_bandwidth=10M"
-                f" --length 60"
+                f" --test-parameter udp_bandwidth=100M"
+                f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -275,11 +275,11 @@ def myArgumentParser() :
         if args.RtoRbandwidth.isdigit() == True : 
             argsDict["RtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else : 
-            print("Invalid RtoRbancwidth value.... moving to defaults.... 10mbit")
-            argsDict["RtoRbandwidth"] = '10mbit'
+            print("Invalid RtoRbancwidth value.... moving to defaults.... 100mbit")
+            argsDict["RtoRbandwidth"] = '100mbit'
     else :
-        print("Setting default router to router bandwidth 10mbit....")
-        argsDict["RtoRbandwidth"] = '10mbit'
+        print("Setting default router to router bandwidth 100mbit....")
+        argsDict["RtoRbandwidth"] = '100mbit'
     
     if args.HtoRdelay :
         if args.HtoRdelay.isdigit() == True :
@@ -294,11 +294,11 @@ def myArgumentParser() :
         if args.HtoRbandwidth.isdigit() == True :
             argsDict["HtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else :
-            print("Invalid HtoRbandwidth.... moving to defaults.... 100mbit")
-            argsDict["HtoRbandwidth"] = '100mbit'
+            print("Invalid HtoRbandwidth.... moving to defaults.... 1000mbit")
+            argsDict["HtoRbandwidth"] = '1000mbit'
     else :
-        print("Setting default host to router bandwidth 100mbit....")
-        argsDict["HtoRbandwidth"] = '100mbit'
+        print("Setting default host to router bandwidth 1000mbit....")
+        argsDict["HtoRbandwidth"] = '1000mbit'
     
     if args.AppArmorFlag :
         if args.AppArmorFlag == 1 :
@@ -321,7 +321,8 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["pfifo","fq_codel","fq_pie","fq_minstrel_pie","cobalt","cake"]
+    # qdiscs = ["pfifo","fq_codel","fq_pie","fq_minstrel_pie","cobalt","cake"]
+    qdiscs = ["pfifo","fq_codel","fq_pie","cobalt","cake"]
 
     for qdisc in qdiscs:
         try:
