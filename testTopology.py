@@ -7,6 +7,7 @@ import subprocess
 import shlex
 import signal
 import argparse
+import time
 
 def getExp(expName, qdisc, procsDict, argsDict):
 
@@ -14,8 +15,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
     dests = {}
     routers = {}
 
-    for i in range(1, 6):
-        #Create 5 Source and Destination Nodes
+    for i in range(1, 7):
+        #Create 6 Source and Destination Nodes
         sources[i] = Node(f'source{i}')
         dests[i] = Node(f'dest{i}')
         #Create 2 Routers
@@ -26,7 +27,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections = {}
 
     #Connect source nodes to router1, dest nodes to router2
-    for i in range(1, 6):
+    for i in range(1, 7):
         (n1_n2, n2_n1) = connect(sources[i], routers[1])
         #Source - Router
         connections[f's{i}_r1'] = n1_n2
@@ -42,7 +43,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections[f'r2_r1'] = n2_n1
 
     #Adding addresses for router-node interfaces
-    for i in range(1, 6):
+    for i in range(1, 7):
         #Source - Router
         connections[f's{i}_r1'].set_address(f'10.0.0.{i}/24')
         connections[f'r1_s{i}'].set_address(f'10.0.0.{10+i}/24') 
@@ -55,19 +56,19 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections[f'r2_r1'].set_address('10.1.0.2/24')
 
     #Set node routing tables{connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}
-    for i in range(1, 6):
+    for i in range(1, 7):
         sources[i].add_route("DEFAULT", connections[f's{i}_r1'])
         dests[i].add_route("DEFAULT", connections[f'd{i}_r2'])
 
     #Set router routing tables
-    for i in range(1,6):
+    for i in range(1, 7):
         routers[1].add_route(f'10.0.0.{i}/24', connections[f'r1_s{i}'])
         routers[1].add_route(f'10.2.0.{i}/24', connections[f'r1_r2'])
         routers[2].add_route(f'10.2.0.{i}/24', connections[f'r2_d{i}'])
         routers[2].add_route(f'10.0.0.{i}/24', connections[f'r2_r1'])
 
     #Set attributes for node-router interfaces
-    for i in range(1, 6):
+    for i in range(1, 7):
         #Source - Router
         connections[f's{i}_r1'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
         connections[f'r1_s{i}'].set_attributes(argsDict['HtoRbandwidth'], argsDict['HtoRdelay'])
@@ -131,7 +132,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
         )
         procsDict['tcpdumpProcs']['r2_r1'] = proc
-    for i in range(1, 6):
+    for i in range(1, 7):
         with dests[i]:
             #List of commands to be run on all destinations
             destCmds = {
@@ -148,15 +149,27 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 #iperf tcp server
                 'iperfTcpServerProcs':f"iperf --server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
                 #irtt server
-                'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
+                'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
+                #dash server
+                'dashServerProcs':f"npm start"
             }
             for procName, cmd in destCmds.items():
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL
-                )
+                if(procName == 'dashServerProcs' and i==6):
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                        cwd="dash.js-development"
+                    )
+                    time.sleep(60)
+                else:
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL
+                    )
                 procsDict[procName][f'd{i}_r2'] = proc
+
         with sources[i]:
             os.mkdir(f'{qdisc}/s{i}_r1')
             if(i == 1):
@@ -197,16 +210,32 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter udp_bandwidth=100M"
+                f" --test-parameter udp_bandwidth=10M"
                 f" --length 300"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
-            proc = subprocess.Popen(
-                shlex.split(cmd),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
+            elif(i == 6):
+                cmd = (
+                "google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.2.0.6:3000/samples/dash-if-reference-player/index.html"
+                )
+            if(i == 6):
+                proc = subprocess.Popen(
+                    shlex.split("xhost +"),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=subprocess.PIPE,
+                    stderr=open(f"dash_{qdisc}","w")
+                )
+            else:
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
             procsDict['flentClientProcs'][f's{i}_r1'] = proc
 
 def runExp(qdisc, argsDict):
@@ -219,7 +248,8 @@ def runExp(qdisc, argsDict):
         'webServerProcs' : {},
         'iperfUdpServerProcs': {},
         'iperfTcpServerProcs': {},
-        'irttServerProcs': {}
+        'irttServerProcs': {},
+        'dashServerProcs': {}
     }
     
     os.umask(0)
@@ -238,7 +268,8 @@ def runExp(qdisc, argsDict):
     
     print(f"Waiting for test {qdisc} to complete...")
     for i in procsDict['flentClientProcs']:
-        procsDict['flentClientProcs'][i].communicate()
+        if(i != 's6_r1'):
+            procsDict['flentClientProcs'][i].communicate()
         procsDict['flentClientProcs'][i].terminate()
     print("Waiting for server processes to shutdown...")
     for i in procsDict:
@@ -275,11 +306,11 @@ def myArgumentParser() :
         if args.RtoRbandwidth.isdigit() == True : 
             argsDict["RtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else : 
-            print("Invalid RtoRbancwidth value.... moving to defaults.... 100mbit")
-            argsDict["RtoRbandwidth"] = '100mbit'
+            print("Invalid RtoRbancwidth value.... moving to defaults.... 10mbit")
+            argsDict["RtoRbandwidth"] = '10mbit'
     else :
-        print("Setting default router to router bandwidth 100mbit....")
-        argsDict["RtoRbandwidth"] = '100mbit'
+        print("Setting default router to router bandwidth 10mbit....")
+        argsDict["RtoRbandwidth"] = '10mbit'
     
     if args.HtoRdelay :
         if args.HtoRdelay.isdigit() == True :
@@ -294,11 +325,11 @@ def myArgumentParser() :
         if args.HtoRbandwidth.isdigit() == True :
             argsDict["HtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else :
-            print("Invalid HtoRbandwidth.... moving to defaults.... 1000mbit")
-            argsDict["HtoRbandwidth"] = '1000mbit'
+            print("Invalid HtoRbandwidth.... moving to defaults.... 100mbit")
+            argsDict["HtoRbandwidth"] = '100mbit'
     else :
-        print("Setting default host to router bandwidth 1000mbit....")
-        argsDict["HtoRbandwidth"] = '1000mbit'
+        print("Setting default host to router bandwidth 100mbit....")
+        argsDict["HtoRbandwidth"] = '100mbit'
     
     if args.AppArmorFlag :
         if args.AppArmorFlag == 1 :
