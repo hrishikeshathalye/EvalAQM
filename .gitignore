@@ -20,6 +20,12 @@ fq_minstrel_pie
 flent
 tcpdump
 
+# Ignore dash files
+dash_*
+
+# Ignore Graphs
+Graphs
+
 # logs
 *.log
 
