@@ -23,6 +23,12 @@ ipcmd
 ethtool
 tc
 
+# Ignore dash files
+dash_*
+
+# Ignore Graphs
+Graphs
+
 # logs
 *.log
 
