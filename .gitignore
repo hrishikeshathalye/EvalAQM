@@ -19,6 +19,9 @@ cobalt
 fq_minstrel_pie
 flent
 tcpdump
+ipcmd
+ethtool
+tc
 
 # logs
 *.log

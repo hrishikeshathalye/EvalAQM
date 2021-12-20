@@ -14,7 +14,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
     sources = {}
     dests = {}
     routers = {}
-
+    
     for i in range(1, 7):
         #Create 6 Source and Destination Nodes
         sources[i] = Node(f'source{i}')
@@ -78,6 +78,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
         
     #Set attributes for router-router interfaces
     qdiscParams = {}
+    if(qdisc != 'cake' and qdisc != 'cobalt'):
+        qdiscParams["limit"] = "1000"
     if(qdisc == "fq_minstrel_pie"):
         qdiscParams['minstrel'] = ""
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'fq_pie', **qdiscParams)
@@ -87,7 +89,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
         qdiscParams["besteffort"] = ""
         qdiscParams["flowblind"] = ""
         qdiscParams["no-ack-filter"] = ""
-        qdiscParams["rtt"] = "20ms"
+        qdiscParams["rtt"] = "100ms"
         qdiscParams["memlimit"] = "400KB"
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'cake', **qdiscParams)
     elif(qdisc != "" and qdisc != "noqueue"):
@@ -97,6 +99,17 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
 
     with routers[1]:
+        proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].ifb.id} gro off gso off tso off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        for i in range(1,7):
+            proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'r1_s{i}'].id} gro off gso off tso off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+            )
         cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/r1_r2.pcap"
         proc = subprocess.Popen(
             shlex.split(cmd),
@@ -115,7 +128,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
             f"flent qdisc-stats "
             f" -D {qdisc}/disc_stats"
             f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
-            f" --length 320"
+            f" --length {argsDict['duration']+20}"
             f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
         )
         proc = subprocess.Popen(
@@ -124,7 +137,35 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
         )
         procsDict['flentClientProcs'][f'r1_r2'] = proc
+        proc = subprocess.Popen(
+            shlex.split(f"ethtool -k {connections[f'r1_r2'].ifb.id}"),
+            stdout=open(f"ethtool/ethtool_{qdisc}", "w"),
+            stderr=subprocess.DEVNULL
+        )
+        proc = subprocess.Popen(
+            shlex.split(f"tc qdisc show dev {connections[f'r1_r2'].ifb.id}"),
+            # shlex.split(f"tc -s qdisc ls"),
+            stdout=open(f"tc/tc_{qdisc}", "w"),
+            stderr=subprocess.DEVNULL
+        )
+        
+        proc = subprocess.Popen(
+            shlex.split(f"ip -s link"),
+            stdout=open(f"ipcmd/ip_{qdisc}", "w"),
+            stderr=subprocess.DEVNULL
+        )
     with routers[2]:
+        proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'r2_r1'].id} gro off gso off tso off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        for i in range(1,7):
+            proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'r2_d{i}'].id} gro off gso off tso off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
         cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
         proc = subprocess.Popen(
             shlex.split(cmd),
@@ -151,17 +192,16 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 #irtt server
                 'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
                 #dash server
-                'dashServerProcs':f"npm start"
+                'dashServerProcs':f"python -m http.server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} 3000"
             }
             for procName, cmd in destCmds.items():
-                if(procName == 'dashServerProcs' and i==6):
+                if(procName == 'dashServerProcs'):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL,
                         cwd="dash.js-development"
                     )
-                    time.sleep(60)
                 else:
                     proc = subprocess.Popen(
                         shlex.split(cmd),
@@ -176,7 +216,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent voip "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 300"
+                f" --length {argsDict['duration']}"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -184,7 +224,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent quake "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 300"
+                f" --length {argsDict['duration']}"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -194,7 +234,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 f" --http-getter-urllist=urls.txt"
                 f" --http-getter-workers=1"
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 300"
+                f" -s 10"
+                f" --length {argsDict['duration']}"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -202,7 +243,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 cmd = (
                 f"flent tcp_1up "
                 f" -D {qdisc}/s{i}_r1"
-                f" --length 300"
+                f" --length {argsDict['duration']}"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -211,7 +252,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
                 f" --test-parameter udp_bandwidth=10M"
-                f" --length 300"
+                f" --length {argsDict['duration']}"
                 f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
                 " --socket-stats"
                 )
@@ -254,17 +295,8 @@ def runExp(qdisc, argsDict):
     
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
-    try:
-        os.mkdir("tcpdump", mode=0o777)
-    except FileExistsError:
-        shutil.rmtree("tcpdump")
-        os.mkdir("tcpdump", mode=0o777)
 
     getExp(qdisc, qdisc, procsDict, argsDict)
-
-    for filename in os.listdir():
-        if(qdisc in filename and filename.endswith("_dump")):
-            os.rename(filename, qdisc)
     
     print(f"Waiting for test {qdisc} to complete...")
     for i in procsDict['flentClientProcs']:
@@ -277,8 +309,6 @@ def runExp(qdisc, argsDict):
             for j in procsDict[i]:
                 procsDict[i][j].terminate()
 
-    shutil.move("tcpdump", f"{qdisc}/tcpdump")
-
 def myArgumentParser() :
     argsDict = {}
     parser = argparse.ArgumentParser()
@@ -289,6 +319,7 @@ def myArgumentParser() :
     parser.add_argument("--RtoRbandwidth", help="Enter bandwidth for router to router link")
     parser.add_argument("--HtoRbandwidth", help="Enter bandwidth for host to router link")
     parser.add_argument("--AppArmorFlag", type=int, help="Enter 1 to disable app armor")
+    parser.add_argument("--duration", type=int, help="Enter test duration in secs")
     args = parser.parse_args()
     
     #Check for each optional arguement.
@@ -340,6 +371,13 @@ def myArgumentParser() :
     else :
         print("App armor flag not set....")
         argsDict['AppArmorFlag'] = 0
+    
+    if args.duration :
+        print(f"Using Test Duration {int(args.duration)}s...")
+        argsDict['duration'] = int(args.duration)
+    else :
+        print("Using Default Duration 300s...")
+        argsDict['duration'] = 300
     #Return the final dictionary of arguements with their values set.
     return argsDict
 
@@ -354,6 +392,14 @@ if __name__ == "__main__":
 
     # qdiscs = ["pfifo","fq_codel","fq_pie","fq_minstrel_pie","cobalt","cake"]
     qdiscs = ["pfifo","fq_codel","fq_pie","cobalt","cake"]
+
+    dirs = ["tcpdump", "ipcmd", "ethtool", "tc"]
+    for i in dirs:
+        try:
+            os.mkdir(i, mode=0o777)
+        except FileExistsError:
+            shutil.rmtree(i)
+            os.mkdir(i, mode=0o777)
 
     for qdisc in qdiscs:
         try:
