@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo python3 testTopology.py
+# sudo python3 testTopology.py
 
 echo -ne "Generating Graphs: 0%"\\r
 graph_dir="Graphs"

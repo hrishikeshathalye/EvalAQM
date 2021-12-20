@@ -61,7 +61,7 @@ cat "$filename" >> "$datafile"
 touch $outfile
 if [ $type == 1 ]
     then
-        python3 scraper.py
+        python3 scraper.py $foldername
     else
         python3 dashscrapper.py $filename
 fi
