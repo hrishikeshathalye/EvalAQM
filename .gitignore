@@ -19,9 +19,20 @@ cobalt
 fq_minstrel_pie
 flent
 tcpdump
+ipcmd
+ethtool
+tc
+
+# Ignore dash files
+dash_*
+
+# Ignore Graphs
+Graphs
 
 # logs
 *.log
 
 # Output on nest install
 nitk_nest.egg-info
+
+dash.js-development/bbb
