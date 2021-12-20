@@ -7,6 +7,7 @@ except:
     print("File mentioned is not a flent file")
     exit()
 
+foldername=sys.argv[1]
 
 n = len(dic["x_values"])
 y_axis = []
@@ -28,6 +29,10 @@ for i in range(n):
         f.write(f"\t{ydata}")
     f.write("\n")
 f.close()
+
+if foldername.find("quake") != -1:
+    for i, res in enumerate(y_axis):
+        y_axis[i]['data'] = y_axis[i]['data'].replace("VoIP", "Quake")
 
 f = open("out.txt", "w+")
 for i, item in enumerate(y_axis):
