@@ -79,7 +79,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
     #Set attributes for router-router interfaces
     qdiscParams = {}
     if(qdisc != 'cake' and qdisc != 'cobalt'):
-        qdiscParams["limit"] = "1000"
+        qdiscParams["limit"] = argsDict['RtoRlimit']
     if(qdisc == "fq_minstrel_pie"):
         qdiscParams['minstrel'] = ""
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'fq_pie', **qdiscParams)
@@ -338,6 +338,7 @@ def myArgumentParser() :
     parser.add_argument("--HtoRbandwidth", help="Enter bandwidth for host to router link")
     parser.add_argument("--AppArmorFlag", type=int, help="Enter 1 to disable app armor")
     parser.add_argument("--duration", type=int, help="Enter test duration in secs")
+    parser.add_argument("--RtoRlimit", help="Enter Router to Router link limit")
     args = parser.parse_args()
     
     #Check for each optional arguement.
@@ -396,6 +397,17 @@ def myArgumentParser() :
     else :
         print("Using Default Duration 300s...")
         argsDict['duration'] = 300
+    
+    if args.RtoRlimit :
+        if args.RtoRlimit.isdigit() == True :
+            argsDict['RtoRlimit'] = args.RtoRlimit
+        else : 
+            print("Invalid Router to Router limit value.... moving to defaults.... 1000")
+            argsDict['RtoRlimit'] = "1000"
+    else :
+        print("Setting default Router to Router limit 1000....")
+        argsDict['RtoRlimit'] = "1000"
+    
     #Return the final dictionary of arguements with their values set.
     return argsDict
 
