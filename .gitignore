@@ -12,11 +12,14 @@ __pycache__
 *_dump/
 noqueue
 pfifo
+codel
+pie
 fq_pie
 cake
 fq_codel
 cobalt
 fq_minstrel_pie
+dash_*
 flent
 tcpdump
 ipcmd

@@ -35,7 +35,7 @@ angular.module('DashIFTestVectorsService', ['ngResource']).factory('dashifTestVe
 
 app.controller('DashController', ['$scope', '$window', 'sources', 'contributors', 'dashifTestVectors', function ($scope, $window, sources, contributors, dashifTestVectors) {
     $scope.selectedItem = {
-        url: 'http://10.2.0.6:3000/bbb/BigBuckBunny_15s_simple_2014_05_09.mpd'
+        url: 'http://10.0.0.6:3000/bbb/BigBuckBunny_15s_simple_2014_05_09.mpd'
     };
 
     sources.query(function (data) {
@@ -269,7 +269,7 @@ app.controller('DashController', ['$scope', '$window', 'sources', 'contributors'
     $scope.loopSelected = true;
     $scope.scheduleWhilePausedSelected = true;
     $scope.calcSegmentAvailabilityRangeFromTimelineSelected = false;
-    $scope.reuseExistingSourceBuffersSelected = true;
+    $scope.reuseExistingSourceBuffersSelected = false;
     $scope.localStorageSelected = false;
     $scope.jumpGapsSelected = true;
     $scope.fastSwitchSelected = true;
