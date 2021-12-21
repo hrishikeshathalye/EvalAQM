@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo python3 testTopology.py --duration 300
+sudo python3 testTopology.py
 
 echo -ne "Generating Graphs: 0%"\\r
 graph_dir="Graphs"
@@ -15,7 +15,7 @@ fi
 mkdir $graph_dir
 graph_dir="$PWD""/$graph_dir"
 
-q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "cobalt" "pie")
+q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie")
 chmod 0777 scraper.sh
 
 echo -ne "Generating Graphs: 0%"\\r
