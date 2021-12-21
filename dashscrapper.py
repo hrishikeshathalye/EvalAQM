@@ -27,12 +27,15 @@ with open(sys.argv[1]) as file:
                     ad = 4
                 for ind, elem in enumerate(arrt):
                     try:
-                        value = float(elem)
-                        if value > y_axis[curr + ind + ad]['max']:
-                            y_axis[curr + ind + ad]['max'] = value
-                        if value < y_axis[curr + ind + ad]['min']:
-                            y_axis[curr + ind + ad]['min'] = value
-                        f2.write(f"{elem}\t")
+                        if elem == "Infinity":
+                            f2.write(f"{y_axis[curr + ind + ad]['max']}\t")
+                        else:
+                            value = float(elem)
+                            if value > y_axis[curr + ind + ad]['max']:
+                                y_axis[curr + ind + ad]['max'] = value
+                            if value < y_axis[curr + ind + ad]['min']:
+                                y_axis[curr + ind + ad]['min'] = value
+                            f2.write(f"{elem}\t")
                     except:
                         f2.write("0\t")
                 if curr == 8:
@@ -40,12 +43,15 @@ with open(sys.argv[1]) as file:
             else:
                 # print(line)
                 try:
-                    value = float(line)
-                    if value > y_axis[curr]['max']:
-                        y_axis[curr]['max'] = value
-                    if value < y_axis[curr]['min']:
-                        y_axis[curr]['min'] = value
-                    f2.write(f"{line}\t")
+                    if line == "Infinity":
+                        f2.write(f"{y_axis[curr]['max']}\t")
+                    else:
+                        value = float(line)
+                        if value > y_axis[curr]['max']:
+                            y_axis[curr]['max'] = value
+                        if value < y_axis[curr]['min']:
+                            y_axis[curr]['min'] = value
+                        f2.write(f"{line}\t")
                 except:
                     f2.write("0\t")
             data_extracted += 1
