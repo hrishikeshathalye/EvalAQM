@@ -110,13 +110,13 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
             )
-        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/r1_r2.pcap"
-        proc = subprocess.Popen(
-            shlex.split(cmd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        procsDict['tcpdumpProcs']['r1_r2'] = proc
+        # cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/r1_r2.pcap"
+        # proc = subprocess.Popen(
+        #     shlex.split(cmd),
+        #     stdout=subprocess.PIPE,
+        #     stderr=subprocess.DEVNULL
+        # )
+        # procsDict['tcpdumpProcs']['r1_r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
             stdout=subprocess.PIPE,
@@ -143,8 +143,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
         )
         proc = subprocess.Popen(
-            shlex.split(f"tc qdisc show dev {connections[f'r1_r2'].ifb.id}"),
-            # shlex.split(f"tc -s qdisc ls"),
+            # shlex.split(f"tc qdisc show dev {connections[f'r1_r2'].ifb.id}"),
+            shlex.split(f"tc -s qdisc ls"),
             stdout=open(f"tc/tc_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
@@ -166,53 +166,74 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
-        proc = subprocess.Popen(
-            shlex.split(cmd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        procsDict['tcpdumpProcs']['r2_r1'] = proc
+        # cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/r2_r1.pcap"
+        # proc = subprocess.Popen(
+        #     shlex.split(cmd),
+        #     stdout=subprocess.PIPE,
+        #     stderr=subprocess.DEVNULL
+        # )
+        # procsDict['tcpdumpProcs']['r2_r1'] = proc
     for i in range(1, 7):
         with dests[i]:
             #List of commands to be run on all destinations
             destCmds = {
                 #tcpdump
-                'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/d{i}_r2.pcap",
+                # 'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/d{i}_r2.pcap",
                 #ditg server
                 'ditgControlServerProcs':f"python scripts/ditg-control-server.py -a {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} --insecure-xml",
                 #netperf server
                 'netServerProcs':f"netserver -4",
-                #http server
-                'webServerProcs':f"python3 -m http.server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} 1234",
                 #iperf udp server
                 'iperfUdpServerProcs':f"iperf --server --udp --udp-histogram --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
                 #iperf tcp server
                 'iperfTcpServerProcs':f"iperf --server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
                 #irtt server
                 'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
-                #dash server
-                'dashServerProcs':f"python -m http.server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} 3000"
+                #flent http process
+                'httpClientProcs':(
+                f"flent http "
+                f" --http-getter-urllist=urls.txt"
+                f" --http-getter-workers=1"
+                f" -D {qdisc}/d3_r2"
+                f" -s 1"
+                f" --length {argsDict['duration']}"
+                f" --host {connections[f's3_r1'].address.get_addr(with_subnet=False)}"
+                ),
+                #chrome dash process
+                'dashClientProcs':f"google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/samples/dash-if-reference-player/index.html",
             }
             for procName, cmd in destCmds.items():
-                if(procName == 'dashServerProcs'):
-                    proc = subprocess.Popen(
-                        shlex.split(cmd),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL,
-                        cwd="dash.js-development"
-                    )
-                else:
+                if(procName == 'httpClientProcs' and i == 3):
+                    os.mkdir(f'{qdisc}/d{i}_r2')
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL
                     )
-                procsDict[procName][f'd{i}_r2'] = proc
+                    procsDict['flentClientProcs'][f'd{i}_r2'] = proc
+                elif(procName == 'dashClientProcs' and i == 6):
+                    proc = subprocess.Popen(
+                        shlex.split("xhost +"),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL
+                    )
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=open(f"dash_{qdisc}","w")
+                    )
+                    procsDict['flentClientProcs'][f'd{i}_r2'] = proc
+                elif(procName != 'dashClientProcs' and procName != 'httpClientProcs'):
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL
+                    )
+                    procsDict[procName][f'd{i}_r2'] = proc
 
         with sources[i]:
-            os.mkdir(f'{qdisc}/s{i}_r1')
             if(i == 1):
+                os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
                 f"flent voip "
                 f" -D {qdisc}/s{i}_r1"
@@ -221,6 +242,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 " --socket-stats"
                 )
             elif(i == 2):
+                os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
                 f"flent quake "
                 f" -D {qdisc}/s{i}_r1"
@@ -230,16 +252,10 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 )
             elif(i == 3):
                 cmd = (
-                f"flent http "
-                f" --http-getter-urllist=urls.txt"
-                f" --http-getter-workers=1"
-                f" -D {qdisc}/s{i}_r1"
-                f" -s 10"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-                " --socket-stats"
+                f"python3 -m http.server --bind {connections[f's{i}_r1'].address.get_addr(with_subnet=False)} 1234"
                 )
             elif(i == 4):
+                os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
                 f"flent tcp_1up "
                 f" -D {qdisc}/s{i}_r1"
@@ -248,6 +264,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 " --socket-stats"
                 )
             elif(i == 5):
+                os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
                 f"flent udp_flood "
                 f" -D {qdisc}/s{i}_r1"
@@ -258,18 +275,14 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 )
             elif(i == 6):
                 cmd = (
-                "google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.2.0.6:3000/samples/dash-if-reference-player/index.html"
+                f"python -m http.server --bind {connections[f's{i}_r1'].address.get_addr(with_subnet=False)} 3000"
                 )
             if(i == 6):
                 proc = subprocess.Popen(
-                    shlex.split("xhost +"),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL
-                )
-                proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.PIPE,
-                    stderr=open(f"dash_{qdisc}","w")
+                    stderr=subprocess.DEVNULL,
+                    cwd="dash.js-development"
                 )
             else:
                 proc = subprocess.Popen(
@@ -277,11 +290,16 @@ def getExp(expName, qdisc, procsDict, argsDict):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL
                 )
-            procsDict['flentClientProcs'][f's{i}_r1'] = proc
+            if(i == 3):
+                procsDict['webServerProcs'][f's{i}_r1'] = proc
+            elif(i == 6):
+                procsDict['dashServerProcs'][f's{i}_r1'] = proc
+            else:
+                procsDict['flentClientProcs'][f's{i}_r1'] = proc
 
 def runExp(qdisc, argsDict):
     procsDict={
-        'tcpdumpProcs': {},
+        # 'tcpdumpProcs': {},
         'netServerProcs' : {},
         'flentClientProcs' : {},
         'sshProcs' : {},
@@ -300,7 +318,7 @@ def runExp(qdisc, argsDict):
     
     print(f"Waiting for test {qdisc} to complete...")
     for i in procsDict['flentClientProcs']:
-        if(i != 's6_r1'):
+        if(i != 'd6_r2'):
             procsDict['flentClientProcs'][i].communicate()
         procsDict['flentClientProcs'][i].terminate()
     print("Waiting for server processes to shutdown...")
@@ -390,9 +408,8 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    # qdiscs = ["pfifo","fq_codel","fq_pie","fq_minstrel_pie","cobalt","cake"]
-    qdiscs = ["pfifo","fq_codel","fq_pie","cobalt","cake"]
-
+    qdiscs = ["pfifo", "codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
+    os.umask(0)
     dirs = ["tcpdump", "ipcmd", "ethtool", "tc"]
     for i in dirs:
         try:
