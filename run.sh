@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo python3 testTopology.py
+# sudo python3 testTopology.py
 
 echo -ne "Generating Graphs: 0%"\\r
 graph_dir="Graphs"
@@ -33,10 +33,10 @@ do
         if [ $j == 3 ]
             then
                 file=$(ls "$i/d$j""_r2")
-                "$script" "$i/d$j""_r2/""$file" 1 $direc
+                "$script" "$i/d$j""_r2/""$file" 1 $direc $i
             else
                 file=$(ls "$i/s$j""_r1")
-                "$script" "$i/s$j""_r1/""$file" 1 $direc
+                "$script" "$i/s$j""_r1/""$file" 1 $direc $i
         fi
         com=`expr $it \* 12`
         ad=`expr $j \* 2`
@@ -52,7 +52,9 @@ for i in "${dash_data[@]}"
 do
     j_name="${i:5}"
     direc="$graph_dir""/$j_name"
-    "$script" "$i" 2 $direc
+    len=`expr length $i`
+    filen=${i:5:$len}
+    "$script" "$i" 2 $direc $filen
     mul=`expr 3 \* $it`
     echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
     it=`expr $it + 1`
