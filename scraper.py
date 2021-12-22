@@ -22,6 +22,9 @@ for i in range(n):
         value = 0
         if ydata != '':
             value = int(ydata)
+        else:
+            value = -1
+            ydata = -1
         if value > y_axis[j]['max']:
             y_axis[j]['max'] = value
         if value < y_axis[j]['min']:
