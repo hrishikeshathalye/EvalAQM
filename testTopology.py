@@ -110,13 +110,13 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
             )
-        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
-        proc = subprocess.Popen(
-            shlex.split(cmd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        procsDict['tcpdumpProcs']['r1_r2'] = proc
+        # cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
+        # proc = subprocess.Popen(
+        #     shlex.split(cmd),
+        #     stdout=subprocess.PIPE,
+        #     stderr=subprocess.DEVNULL
+        # )
+        # procsDict['tcpdumpProcs']['r1_r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
             stdout=subprocess.PIPE,
@@ -166,19 +166,19 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/{qdisc}/r2_r1.pcap"
-        proc = subprocess.Popen(
-            shlex.split(cmd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        procsDict['tcpdumpProcs']['r2_r1'] = proc
+        # cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/{qdisc}/r2_r1.pcap"
+        # proc = subprocess.Popen(
+        #     shlex.split(cmd),
+        #     stdout=subprocess.PIPE,
+        #     stderr=subprocess.DEVNULL
+        # )
+        # procsDict['tcpdumpProcs']['r2_r1'] = proc
     for i in range(1, 7):
         with dests[i]:
             #List of commands to be run on all destinations
             destCmds = {
                 #tcpdump
-                'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/{qdisc}/d{i}_r2.pcap",
+                # 'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/{qdisc}/d{i}_r2.pcap",
                 #ditg server
                 'ditgControlServerProcs':f"python scripts/ditg-control-server.py -a {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} --insecure-xml",
                 #netperf server
@@ -266,18 +266,19 @@ def getExp(expName, qdisc, procsDict, argsDict):
             elif(i == 5):
                 os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
-                f"flent udp_flood "
-                f" -D {qdisc}/s{i}_r1"
-                f" --test-parameter udp_bandwidth=10M"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-                " --socket-stats"
+                f"./udpBurst.sh"
                 )
             elif(i == 6):
                 cmd = (
                 f"python -m http.server --bind {connections[f's{i}_r1'].address.get_addr(with_subnet=False)} 3000"
                 )
-            if(i == 6):
+            if(i == 5):
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    stdout=open(f"{qdisc}/s{i}_r1/udpBurstDebug", "w"),
+                    stderr=subprocess.DEVNULL,
+                )
+            elif(i == 6):
                 proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.PIPE,
@@ -292,6 +293,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
                 )
             if(i == 3):
                 procsDict['webServerProcs'][f's{i}_r1'] = proc
+            elif(i == 5):
+                procsDict['udpBurstClient'][f's{i}_r1'] = proc
             elif(i == 6):
                 procsDict['dashServerProcs'][f's{i}_r1'] = proc
             else:
@@ -299,7 +302,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
 
 def runExp(qdisc, argsDict):
     procsDict={
-        'tcpdumpProcs': {},
+        # 'tcpdumpProcs': {},
         'netServerProcs' : {},
         'flentClientProcs' : {},
         'sshProcs' : {},
@@ -308,7 +311,8 @@ def runExp(qdisc, argsDict):
         'iperfUdpServerProcs': {},
         'iperfTcpServerProcs': {},
         'irttServerProcs': {},
-        'dashServerProcs': {}
+        'dashServerProcs': {},
+        'udpBurstClient': {}
     }
     
     os.umask(0)
@@ -402,11 +406,11 @@ def myArgumentParser() :
         if args.RtoRlimit.isdigit() == True :
             argsDict['RtoRlimit'] = args.RtoRlimit
         else : 
-            print("Invalid Router to Router limit value.... moving to defaults.... 600")
-            argsDict['RtoRlimit'] = "600"
+            print("Invalid Router to Router limit value.... moving to defaults.... 400")
+            argsDict['RtoRlimit'] = "400"
     else :
-        print("Setting default Router to Router limit 600....")
-        argsDict['RtoRlimit'] = "600"
+        print("Setting default Router to Router limit 400....")
+        argsDict['RtoRlimit'] = "400"
     
     #Return the final dictionary of arguements with their values set.
     return argsDict
