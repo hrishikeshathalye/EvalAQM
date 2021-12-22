@@ -220,7 +220,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
-                        stderr=open(f"dash_{qdisc}","w")
+                        stderr=open(f"dash_files/dash_{qdisc}","w")
                     )
                     procsDict['flentClientProcs'][f'd{i}_r2'] = proc
                 elif(procName != 'dashClientProcs' and procName != 'httpClientProcs'):
@@ -266,7 +266,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
             elif(i == 5):
                 os.mkdir(f'{qdisc}/s{i}_r1')
                 cmd = (
-                f"./udpBurst.sh"
+                f"./scripts/udpBurst.sh"
                 )
             elif(i == 6):
                 cmd = (
@@ -426,7 +426,7 @@ if __name__ == "__main__":
 
     qdiscs = ["pfifo", "codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
     os.umask(0)
-    dirs = ["tcpdump", "ipcmd", "ethtool", "tc"]
+    dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
     for i in dirs:
         try:
             os.mkdir(i, mode=0o777)
@@ -437,6 +437,8 @@ if __name__ == "__main__":
             os.mkdir(i, mode=0o777)
             for j in qdiscs:
                 os.mkdir(f"{i}/{j}", mode=0o777)
+    
+    os.chmod("./scripts/udpBurst.sh", mode=0o777)
 
     for qdisc in qdiscs:
         try:
@@ -444,3 +446,5 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
         runExp(qdisc, argsDict)
+
+    subprocess.call(['bash', './scripts/run.sh'])
