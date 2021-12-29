@@ -110,12 +110,12 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
             )
-        # cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
-        # proc = subprocess.Popen(
-        #     shlex.split(cmd),
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.DEVNULL
-        # )
+        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
+        proc = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
         # procsDict['tcpdumpProcs']['r1_r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
@@ -448,3 +448,7 @@ if __name__ == "__main__":
         runExp(qdisc, argsDict)
 
     subprocess.call(['bash', './scripts/run.sh'])
+
+    bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes few minutes (Y/N)")
+    if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
+        subprocess.call(['bash', './scripts/pcap_scrap.sh'])
