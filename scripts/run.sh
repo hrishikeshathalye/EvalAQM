@@ -1,4 +1,5 @@
 #!/bin/bash
+
 cd scripts
 echo -ne "Generating Graphs: 0%"\\r
 graph_dir="../Graphs"
@@ -26,15 +27,21 @@ do
             rm -r $direc
     fi
     mkdir "$direc"
-    for j in $(seq 1 4)
+    for j in $(seq 1 5)
     do
-        if [ $j == 3 ]
+        if [ $j == 5 ]
             then
-                file=$(ls "../$i/d$j""_r2")
-                "$script" "../$i/d$j""_r2/""$file" 1 $direc $i
+                file=$(ls "../$i/disc_stats")
+                "$script" "../$i/disc_stats/""$file" 1 $direc $i
             else
-                file=$(ls "../$i/s$j""_r1")
-                "$script" "../$i/s$j""_r1/""$file" 1 $direc $i
+                if [ $j == 3 ]
+                    then
+                        file=$(ls "../$i/d$j""_r2")
+                        "$script" "../$i/d$j""_r2/""$file" 1 $direc $i
+                    else
+                        file=$(ls "../$i/s$j""_r1")
+                        "$script" "../$i/s$j""_r1/""$file" 1 $direc $i
+                fi
         fi
         com=`expr $it \* 12`
         ad=`expr $j \* 2`
