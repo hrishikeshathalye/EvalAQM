@@ -90,7 +90,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
         qdiscParams["flowblind"] = ""
         qdiscParams["no-ack-filter"] = ""
         qdiscParams["rtt"] = "100ms"
-        qdiscParams["memlimit"] = "400KB"
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'cake', **qdiscParams)
     elif(qdisc != "" and qdisc != "noqueue"):
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc, **qdiscParams)
@@ -116,7 +115,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        # procsDict['tcpdumpProcs']['r1_r2'] = proc
+        procsDict['tcpdumpProcs']['r1_r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
             stdout=subprocess.PIPE,
@@ -302,7 +301,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
 
 def runExp(qdisc, argsDict):
     procsDict={
-        # 'tcpdumpProcs': {},
+        'tcpdumpProcs': {},
         'netServerProcs' : {},
         'flentClientProcs' : {},
         'sshProcs' : {},
