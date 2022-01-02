@@ -98,14 +98,20 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
 
     with routers[1]:
+        #On R1 : Disabling offloads, starting tcpdump, starting ssh-server, starting qdisc stats capture, running ethtool, tc and ip link to get metadata relating to config
         proc = subprocess.Popen(
-            shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].ifb.id} gro off gso off tso off"),
+            shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].id} gro off gso off tso off ufo off lro off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+        proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].ifb.id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
         for i in range(1,7):
             proc = subprocess.Popen(
-            shlex.split(f"sudo ethtool -K  {connections[f'r1_s{i}'].id} gro off gso off tso off"),
+            shlex.split(f"sudo ethtool -K  {connections[f'r1_s{i}'].id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
             )
@@ -146,38 +152,48 @@ def getExp(expName, qdisc, procsDict, argsDict):
             shlex.split(f"tc -s qdisc ls"),
             stdout=open(f"tc/tc_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
-        )
-        
+        )  
         proc = subprocess.Popen(
             shlex.split(f"ip -s link"),
             stdout=open(f"ipcmd/ip_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
+
     with routers[2]:
+        #Disabling Offloads on R2
         proc = subprocess.Popen(
-            shlex.split(f"sudo ethtool -K  {connections[f'r2_r1'].id} gro off gso off tso off"),
+            shlex.split(f"sudo ethtool -K  {connections[f'r2_r1'].id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
         for i in range(1,7):
             proc = subprocess.Popen(
-            shlex.split(f"sudo ethtool -K  {connections[f'r2_d{i}'].id} gro off gso off tso off"),
+            shlex.split(f"sudo ethtool -K  {connections[f'r2_d{i}'].id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
-        )
-        # cmd = f"tcpdump -i {connections[f'r2_r1'].id} -w tcpdump/{qdisc}/r2_r1.pcap"
-        # proc = subprocess.Popen(
-        #     shlex.split(cmd),
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.DEVNULL
-        # )
-        # procsDict['tcpdumpProcs']['r2_r1'] = proc
+            )
+
+
+    for i in range(1, 7):
+        #Disabling Offloads on sources
+        with sources[i]:
+            proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f's{i}_r1'].id} gro off gso off tso off ufo off lro off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+            )
+        #Disabling Offloads on destinations
+        with dests[i]:
+            proc = subprocess.Popen(
+            shlex.split(f"sudo ethtool -K  {connections[f'd{i}_r2'].id} gro off gso off tso off ufo off lro off"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+            )
+
     for i in range(1, 7):
         with dests[i]:
             #List of commands to be run on all destinations
             destCmds = {
-                #tcpdump
-                # 'tcpdumpProcs':f"tcpdump -i {connections[f'd{i}_r2'].id} -w tcpdump/{qdisc}/d{i}_r2.pcap",
                 #ditg server
                 'ditgControlServerProcs':f"python scripts/ditg-control-server.py -a {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} --insecure-xml",
                 #netperf server
@@ -222,7 +238,8 @@ def getExp(expName, qdisc, procsDict, argsDict):
                         stderr=open(f"dash_files/dash_{qdisc}","w")
                     )
                     procsDict['flentClientProcs'][f'd{i}_r2'] = proc
-                elif(procName != 'dashClientProcs' and procName != 'httpClientProcs'):
+                #Cannot start dashClient and httpClient until their servers are running
+                if(procName != 'dashClientProcs' and procName != 'httpClientProcs'):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
