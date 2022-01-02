@@ -9,7 +9,7 @@ import signal
 import argparse
 import time
 
-def getExp(expName, qdisc, procsDict, argsDict):
+def getExp(qdisc, serverProcs, clientProcs, argsDict):
 
     sources = {}
     dests = {}
@@ -98,7 +98,7 @@ def getExp(expName, qdisc, procsDict, argsDict):
     connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
 
     with routers[1]:
-        #On R1 : Disabling offloads, starting tcpdump, starting ssh-server, starting qdisc stats capture, running ethtool, tc and ip link to get metadata relating to config
+        #On R1 : Disabling offloads, starting tcpdump, starting ssh-server, running ethtool, tc and ip link to get metadata relating to config
         proc = subprocess.Popen(
             shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
@@ -121,41 +121,26 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        procsDict['tcpdumpProcs']['r1_r2'] = proc
+        serverProcs['tcpdumpr1r2'] = proc
         proc = subprocess.Popen(
             ['/usr/sbin/sshd'],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
-        procsDict['sshProcs']['r1_r2'] = proc
-        os.mkdir(f'{qdisc}/disc_stats')
-        cmd = (
-            f"flent qdisc-stats "
-            f" -D {qdisc}/disc_stats"
-            f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
-            f" --length {argsDict['duration']+20}"
-            f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
-        )
-        proc = subprocess.Popen(
-            shlex.split(cmd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        procsDict['flentClientProcs'][f'r1_r2'] = proc
+        serverProcs['sshr1r2'] = proc
         proc = subprocess.Popen(
             shlex.split(f"ethtool -k {connections[f'r1_r2'].ifb.id}"),
-            stdout=open(f"ethtool/ethtool_{qdisc}", "w"),
+            stdout=open(f"ethtool/{qdisc}/ethtool_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
         proc = subprocess.Popen(
-            # shlex.split(f"tc qdisc show dev {connections[f'r1_r2'].ifb.id}"),
             shlex.split(f"tc -s qdisc ls"),
-            stdout=open(f"tc/tc_{qdisc}", "w"),
+            stdout=open(f"tc/{qdisc}/tc_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )  
         proc = subprocess.Popen(
             shlex.split(f"ip -s link"),
-            stdout=open(f"ipcmd/ip_{qdisc}", "w"),
+            stdout=open(f"ipcmd/{qdisc}/ip_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
 
@@ -173,7 +158,6 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
             )
 
-
     for i in range(1, 7):
         #Disabling Offloads on sources
         with sources[i]:
@@ -190,162 +174,146 @@ def getExp(expName, qdisc, procsDict, argsDict):
             stderr=subprocess.DEVNULL
             )
 
-    for i in range(1, 7):
-        with dests[i]:
-            #List of commands to be run on all destinations
-            destCmds = {
-                #ditg server
-                'ditgControlServerProcs':f"python scripts/ditg-control-server.py -a {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)} --insecure-xml",
-                #netperf server
-                'netServerProcs':f"netserver -4",
-                #iperf udp server
-                'iperfUdpServerProcs':f"iperf --server --udp --udp-histogram --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
-                #iperf tcp server
-                'iperfTcpServerProcs':f"iperf --server --bind {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
-                #irtt server
-                'irttServerProcs':f"irtt server -b {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}",
-                #flent http process
-                'httpClientProcs':(
-                f"flent http "
-                f" --http-getter-urllist=urls.txt"
-                f" --http-getter-workers=1"
-                f" -D {qdisc}/d3_r2"
-                f" -s 1"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f's3_r1'].address.get_addr(with_subnet=False)}"
-                ),
-                #chrome dash process
-                'dashClientProcs':f"google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/samples/dash-if-reference-player/index.html",
-            }
-            for procName, cmd in destCmds.items():
-                if(procName == 'httpClientProcs' and i == 3):
-                    os.mkdir(f'{qdisc}/d{i}_r2')
+    serverCmds = {
+        #irtt server - D1
+        'irttServer':(dests[1], [f"irtt server -b {connections[f'd1_r2'].address.get_addr(with_subnet=False)}"]),
+        #ditg server - D2
+        'ditgControlServer':(dests[2], [f"python scripts/ditg-control-server.py -a {connections[f'd2_r2'].address.get_addr(with_subnet=False)} --insecure-xml"]),
+        #HTTP Server - S3
+        'httpServer':(sources[3], [f"python3 -m http.server --bind {connections[f's3_r1'].address.get_addr(with_subnet=False)} 1234"]),
+        #netperf server - D4
+        'netServer':(dests[4], [f"netserver -4"]),
+        #iperf udp server - D5
+        'iperfUdpServer':(dests[5], [f"iperf --server --udp --udp-histogram --bind {connections[f'd5_r2'].address.get_addr(with_subnet=False)}"]),
+        #DASH Serving HTTP Server - S6
+        'dashServer':(sources[6], [f"python -m http.server --bind {connections[f's6_r1'].address.get_addr(with_subnet=False)} 3000"])
+    }
+
+    #start all server processes
+    for procName, nodeCmd in serverCmds.items():
+        with nodeCmd[0]:
+            for cmd in nodeCmd[1]:
+                if(procName == 'dashServer'):
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                        cwd="dash.js-development"
+                    )
+                else:
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL
                     )
-                    procsDict['flentClientProcs'][f'd{i}_r2'] = proc
-                elif(procName == 'dashClientProcs' and i == 6):
+                serverProcs[procName] = proc
+
+    #Sleep to make sure all server processes are up
+    time.sleep(10)
+
+    #Second element is a list, but procName is assigned only for last process in the list
+    clientCmds = {
+        #flent voip test - S1
+        'flentVoip':(sources[1], [(
+        f"flent voip "
+        f" -D {qdisc}/s1_r1"
+        f" --length {argsDict['duration']}"
+        f" --host {connections[f'd1_r2'].address.get_addr(with_subnet=False)}"
+        " --socket-stats"
+        )]),
+        #flent quake test - S2
+        'flentQuake':(sources[2], [(
+        f"flent quake "
+        f" -D {qdisc}/s2_r1"
+        f" --length {argsDict['duration']}"
+        f" --host {connections[f'd2_r2'].address.get_addr(with_subnet=False)}"
+        " --socket-stats"
+        )]),
+        #flent http process - D3
+        'httpClient':(dests[3],[(
+        f"flent http "
+        f" --http-getter-urllist=urls.txt"
+        f" --http-getter-workers=1"
+        f" -D {qdisc}/d3_r2"
+        f" -s 1"
+        f" --length {argsDict['duration']}"
+        f" --host {connections[f's3_r1'].address.get_addr(with_subnet=False)}"
+        )]),
+        #flent tcp_1up - S4
+        'flentTcp':(sources[4], [(
+        f"flent tcp_1up "
+        f" -D {qdisc}/s4_r1"
+        f" --length {argsDict['duration']}"
+        f" --host {connections[f'd4_r2'].address.get_addr(with_subnet=False)}"
+        " --socket-stats"
+        )]),
+        #udp bursts - S5
+        'udpBurstClient':(sources[5], [(
+        f"./scripts/udpBurst.sh"
+        )]),
+        #chrome dash process - D6
+        'dashClient':(dests[6],["xhost +", f"google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/samples/dash-if-reference-player/index.html"]),
+        #flent qdisc_stats - R1
+        'qdiscStats':(routers[1], [(
+            f"flent qdisc-stats "
+            f" -D {qdisc}/disc_stats"
+            f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
+            f" --length {argsDict['duration']}"
+            f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
+        )])
+    }
+
+    #start all client processes
+    os.mkdir(f'{qdisc}/s1_r1')
+    os.mkdir(f'{qdisc}/s2_r1')
+    os.mkdir(f'{qdisc}/d3_r2')
+    os.mkdir(f'{qdisc}/s4_r1')
+    os.mkdir(f'{qdisc}/s5_r1')
+    os.mkdir(f'{qdisc}/disc_stats')
+    for procName, nodeCmd in clientCmds.items():
+        with nodeCmd[0]:
+            for cmd in nodeCmd[1]:
+                if(procName == 'udpBurstClient'):
                     proc = subprocess.Popen(
-                        shlex.split("xhost +"),
-                        stdout=subprocess.PIPE,
+                        shlex.split(cmd),
+                        stdout=open(f"{qdisc}/s5_r1/udpBurstDebug", "w"),
                         stderr=subprocess.DEVNULL
                     )
+                elif(procName == 'dashClient'):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
                         stderr=open(f"dash_files/dash_{qdisc}","w")
                     )
-                    procsDict['flentClientProcs'][f'd{i}_r2'] = proc
-                #Cannot start dashClient and httpClient until their servers are running
-                if(procName != 'dashClientProcs' and procName != 'httpClientProcs'):
+                else:
                     proc = subprocess.Popen(
-                        shlex.split(cmd),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL
-                    )
-                    procsDict[procName][f'd{i}_r2'] = proc
-
-        with sources[i]:
-            if(i == 1):
-                os.mkdir(f'{qdisc}/s{i}_r1')
-                cmd = (
-                f"flent voip "
-                f" -D {qdisc}/s{i}_r1"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-                " --socket-stats"
-                )
-            elif(i == 2):
-                os.mkdir(f'{qdisc}/s{i}_r1')
-                cmd = (
-                f"flent quake "
-                f" -D {qdisc}/s{i}_r1"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-                " --socket-stats"
-                )
-            elif(i == 3):
-                cmd = (
-                f"python3 -m http.server --bind {connections[f's{i}_r1'].address.get_addr(with_subnet=False)} 1234"
-                )
-            elif(i == 4):
-                os.mkdir(f'{qdisc}/s{i}_r1')
-                cmd = (
-                f"flent tcp_1up "
-                f" -D {qdisc}/s{i}_r1"
-                f" --length {argsDict['duration']}"
-                f" --host {connections[f'd{i}_r2'].address.get_addr(with_subnet=False)}"
-                " --socket-stats"
-                )
-            elif(i == 5):
-                os.mkdir(f'{qdisc}/s{i}_r1')
-                cmd = (
-                f"./scripts/udpBurst.sh"
-                )
-            elif(i == 6):
-                cmd = (
-                f"python -m http.server --bind {connections[f's{i}_r1'].address.get_addr(with_subnet=False)} 3000"
-                )
-            if(i == 5):
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    stdout=open(f"{qdisc}/s{i}_r1/udpBurstDebug", "w"),
-                    stderr=subprocess.DEVNULL,
-                )
-            elif(i == 6):
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    cwd="dash.js-development"
-                )
-            else:
-                proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL
                 )
-            if(i == 3):
-                procsDict['webServerProcs'][f's{i}_r1'] = proc
-            elif(i == 5):
-                procsDict['udpBurstClient'][f's{i}_r1'] = proc
-            elif(i == 6):
-                procsDict['dashServerProcs'][f's{i}_r1'] = proc
-            else:
-                procsDict['flentClientProcs'][f's{i}_r1'] = proc
+                clientProcs[procName] = proc
 
 def runExp(qdisc, argsDict):
-    procsDict={
-        'tcpdumpProcs': {},
-        'netServerProcs' : {},
-        'flentClientProcs' : {},
-        'sshProcs' : {},
-        'ditgControlServerProcs' : {},
-        'webServerProcs' : {},
-        'iperfUdpServerProcs': {},
-        'iperfTcpServerProcs': {},
-        'irttServerProcs': {},
-        'dashServerProcs': {},
-        'udpBurstClient': {}
-    }
+    #serverProcs includes all those processes that will have to be started before clientProcs,
+    #terminate is called directly on these processes after clientProcs have ended
+    serverProcs={}
+    #clientProcs includes all those processes that will be started after corresponding serverProcs have started,
+    #communicate() is called on these processes to wait for them to terminate, except dash client (d6_r2)
+    clientProcs={}
     
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
 
-    getExp(qdisc, qdisc, procsDict, argsDict)
+    getExp(qdisc, serverProcs, clientProcs, argsDict)
     
     print(f"Waiting for test {qdisc} to complete...")
-    for i in procsDict['flentClientProcs']:
-        if(i != 'd6_r2'):
-            procsDict['flentClientProcs'][i].communicate()
-        procsDict['flentClientProcs'][i].terminate()
+    for i in clientProcs:
+        if(i == 'dashClient' or i == 'udpBurstClient'):
+            clientProcs[i].terminate()
+        clientProcs[i].communicate()
     print("Waiting for server processes to shutdown...")
-    for i in procsDict:
-        if(i != 'flentClientProcs'):
-            for j in procsDict[i]:
-                procsDict[i][j].terminate()
+    for i in serverProcs:
+        serverProcs[i].terminate()
 
 def myArgumentParser() :
     argsDict = {}

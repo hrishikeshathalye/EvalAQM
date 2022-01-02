@@ -23,20 +23,19 @@ with scapy.PcapReader(f"{sys.argv[1]}/r1_r2.pcap") as pr:
         
         if i.type == 2048:
             ip = i['IP'].dst
-        # print(i.t)
         
         if i.time - start_time >= time:
             print(f"Completed: {int(time/3)}%", end="\r")
+            for j in data_sent:
+                sum += j
             sum *= 10
-            sum = sum / 131072
-            f.write(f"{time}\t{data_sent[0]/131072}\t{data_sent[1]/131072}\t{data_sent[2]/131072}\t{data_sent[3]/131072}\t{data_sent[4]/131072}\t{data_sent[5]/131072}\t{sum}\n")
+            sum = sum / 125000
+            f.write(f"{time}\t{data_sent[0]/125000}\t{data_sent[1]/125000}\t{data_sent[2]/125000}\t{data_sent[3]/125000}\t{data_sent[4]/125000}\t{data_sent[5]/125000}\t{sum}\n")
             time += 1
             if time == 301:
                 break
             data_sent = [0] * 6
-            sum = len(i)
-        else:
-            sum += len(i)
+            sum = 0
 
         if ip == '10.2.0.1':
             data_sent[0] += len(i)
