@@ -9,6 +9,8 @@ y_axis = []
 for keys in y_data:
     y_axis.append({'data': keys, 'max': -10000000, 'min': 10000000})
 
+curr_buff_level = 0
+
 data_extracted = 0
 with open(sys.argv[1]) as file:
     for line in file:
@@ -18,7 +20,7 @@ with open(sys.argv[1]) as file:
             line = line[ind + len(data_ext[curr]):]
             ind = line.find("\"")
             line = line[:ind]
-            if curr > 5 or curr < 9: 
+            if curr > 5 and curr < 9: 
                 arrt = line.split(" | ")
                 ad = 0
                 if curr == 7:
@@ -41,17 +43,24 @@ with open(sys.argv[1]) as file:
                 if curr == 8:
                     f2.write("\n")
             else:
-                # print(line)
                 try:
                     if line == "Infinity":
-                        f2.write(f"{y_axis[curr]['max']}\t")
+                        if curr == 4 and curr_buff_level == 0:
+                            f2.write(f"0\t")
+                        else:
+                            f2.write(f"{y_axis[curr]['max']}\t")
                     else:
                         value = float(line)
+                        if curr == 1:
+                            curr_buff_level = int(value)
                         if value > y_axis[curr]['max']:
                             y_axis[curr]['max'] = value
                         if value < y_axis[curr]['min']:
                             y_axis[curr]['min'] = value
-                        f2.write(f"{line}\t")
+                        if curr == 4 and curr_buff_level == 0:
+                            f2.write("0\t")
+                        else:
+                            f2.write(f"{line}\t")
                 except:
                     f2.write("0\t")
             data_extracted += 1
