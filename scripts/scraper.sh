@@ -62,7 +62,7 @@ cat "$filename" >> "$datafile"
 touch $outfile
 if [ $type == 1 ]
     then
-        python3 scraper.py $foldername
+        python3 scraper.py $foldername $q_disc
     else
         python3 dashscrapper.py $filename
 fi
@@ -99,6 +99,12 @@ while [ $a -lt $loops ]
         gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:301]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
         a=`expr $a + 1`
     done
+
+if [[ $foldername == *"voip"* ]]
+    then
+        gnuplot -e "set terminal png size 400,300; set output '$foldername/MOS.png'; set ylabel 'MOS'; set yrange [0:5]; set title 'Plot of MOS values'; set boxwidth 0.6; set style fill solid; plot 'mos_file.txt' using 1:3:xtic(2) with boxes ls 7 notitle"
+        rm mos_file.txt
+fi
 
 mv $foldername $graph_dir
 

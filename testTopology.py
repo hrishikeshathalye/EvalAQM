@@ -405,37 +405,37 @@ def myArgumentParser() :
 
 if __name__ == "__main__":
     
-    argsDict = myArgumentParser()
-    print("Argument dictionary is : ", argsDict)
+    # argsDict = myArgumentParser()
+    # print("Argument dictionary is : ", argsDict)
     
-    if argsDict['AppArmorFlag'] == 1 :
-        subprocess.call(['sh', './scripts/disableAppArmor.sh'])
+    # if argsDict['AppArmorFlag'] == 1 :
+    #     subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["pfifo", "codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
+    # qdiscs = ["pfifo", "codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
     os.umask(0)
-    dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
-    for i in dirs:
-        try:
-            os.mkdir(i, mode=0o777)
-            for j in qdiscs:
-                os.mkdir(f"{i}/{j}", mode=0o777)
-        except FileExistsError:
-            shutil.rmtree(i)
-            os.mkdir(i, mode=0o777)
-            for j in qdiscs:
-                os.mkdir(f"{i}/{j}", mode=0o777)
+    # dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
+    # for i in dirs:
+    #     try:
+    #         os.mkdir(i, mode=0o777)
+    #         for j in qdiscs:
+    #             os.mkdir(f"{i}/{j}", mode=0o777)
+    #     except FileExistsError:
+    #         shutil.rmtree(i)
+    #         os.mkdir(i, mode=0o777)
+    #         for j in qdiscs:
+    #             os.mkdir(f"{i}/{j}", mode=0o777)
     
-    os.chmod("./scripts/udpBurst.sh", mode=0o777)
+    # os.chmod("./scripts/udpBurst.sh", mode=0o777)
 
-    for qdisc in qdiscs:
-        try:
-            shutil.rmtree(qdisc)
-        except FileNotFoundError:
-            pass
-        runExp(qdisc, argsDict)
+    # for qdisc in qdiscs:
+    #     try:
+    #         shutil.rmtree(qdisc)
+    #     except FileNotFoundError:
+    #         pass
+    #     runExp(qdisc, argsDict)
 
     subprocess.call(['bash', './scripts/run.sh'])
 
-    bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes few minutes (Y/N)")
-    if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
-        subprocess.call(['bash', './scripts/pcap_scrap.sh'])
+    # bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes few minutes (Y/N)")
+    # if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
+    #     subprocess.call(['bash', './scripts/pcap_scrap.sh'])
