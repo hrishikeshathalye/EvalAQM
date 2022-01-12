@@ -43,11 +43,13 @@
 <script>
     window.onload = function(){
     var button = document.getElementById('load1');
-    button.click()
     var latencyCheck = document.getElementById("lowLatencyModeCB");
-    latencyCheck.checked = true;
+    latencyCheck.checked = false;
     var liveCatchupCheck = document.getElementById("liveCatchupCB");
     liveCatchupCheck.checked = false;
+    var tmp = document.getElementById("lowLatencyModeEnabledByManifestCB");
+    tmp.checked = false;
+    button.click()
 }
 </script>
 <!-- Mobile Stream Menu-->
@@ -782,11 +784,7 @@
                 <input type="text" class="form-control" placeholder="content id" ng-model="cmcdContentId">
                 <label class="options-label" data-toggle="tooltip" data-placement="right"
                        title="A static value to be used as RTP parameter">Requested maximum throughput (rtp):</label>
-                <input type="text" class="form-control" placeholder="Reported bitrate: 14932 Kbps
-                Buffer level: 59.738 secs
-                Calculated bitrate: 7079 Kbps
-                Framerate: 30 fps
-                Resolution: 3840x2160rtp in kbps" ng-model="cmcdRtp">
+                <input type="text" class="form-control" placeholder="rtp in kbps" ng-model="cmcdRtp">
                 <label class="options-label" data-toggle="tooltip" data-placement="right"
                        title="This value is used as a factor for the rtp value calculation: rtp = minBandwidth * rtpSafetyFactor. If not specified this value defaults to 5. Note that this value is only used when no static rtp value is defined.">RTP
                     safety factor:</label>

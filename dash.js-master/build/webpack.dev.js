@@ -14,9 +14,8 @@ const config = merge(common, {
         filename: '[name].debug.js',
     },
     devServer: {
-    	host: '0.0.0.0',
         contentBase: path.join(__dirname, '../'),
-        open: false,
+        open: true,
         openPage: 'samples/index.html',
         hot: true,
         compress: true,

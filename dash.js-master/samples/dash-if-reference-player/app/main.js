@@ -35,7 +35,7 @@ angular.module('DashIFTestVectorsService', ['ngResource']).factory('dashifTestVe
 
 app.controller('DashController', ['$scope', '$window', 'sources', 'contributors', 'dashifTestVectors', function ($scope, $window, sources, contributors, dashifTestVectors) {
     $scope.selectedItem = {
-        url: 'http://10.0.0.6:3000/bbb/BigBuckBunny_15s_simple_2014_05_09.mpd'
+        url: 'http://10.0.0.6:3000/bbb/BigBuckBunny_2s_simple_2014_05_09.mpd'
     };
 
     sources.query(function (data) {
@@ -269,14 +269,14 @@ app.controller('DashController', ['$scope', '$window', 'sources', 'contributors'
     $scope.loopSelected = true;
     $scope.scheduleWhilePausedSelected = true;
     $scope.calcSegmentAvailabilityRangeFromTimelineSelected = false;
-    $scope.reuseExistingSourceBuffersSelected = false;
-    $scope.localStorageSelected = false;
+    $scope.reuseExistingSourceBuffersSelected = true;
+    $scope.localStorageSelected = true;
     $scope.jumpGapsSelected = true;
     $scope.fastSwitchSelected = true;
     $scope.applyServiceDescription = true;
     $scope.useSuggestedPresentationDelay = true;
     $scope.videoAutoSwitchSelected = true;
-    $scope.forceQualitySwitchSelected = true;
+    $scope.forceQualitySwitchSelected = false;
     $scope.videoQualities = [];
     $scope.ABRStrategy = 'abrDynamic';
 
@@ -405,6 +405,7 @@ app.controller('DashController', ['$scope', '$window', 'sources', 'contributors'
         $scope.chartCount = 0;
         $scope.metricsTimer = setInterval(function () {
             updateMetrics('video');
+            updateMetrics('audio');
             $scope.chartCount++;
         }, $scope.updateMetricsInterval);
     }, $scope);
@@ -1452,7 +1453,6 @@ app.controller('DashController', ['$scope', '$window', 'sources', 'contributors'
                 $scope[type + 'Latency'] = httpMetrics.latency[type].low.toFixed(2) + ' | ' + httpMetrics.latency[type].average.toFixed(2) + ' | ' + httpMetrics.latency[type].high.toFixed(2);
                 $scope[type + 'Ratio'] = httpMetrics.ratio[type].low.toFixed(2) + ' | ' + httpMetrics.ratio[type].average.toFixed(2) + ' | ' + httpMetrics.ratio[type].high.toFixed(2);
             }
-
             //printing metrics for data points
             console.log("Time : " + getTimeForPlot())
             console.log("Buffer Level : " + $scope.videoBufferLength)
@@ -1463,7 +1463,6 @@ app.controller('DashController', ['$scope', '$window', 'sources', 'contributors'
             console.log("Latency (min|avg|max) : " + $scope.videoLatency)
             console.log("Download (min|avg|max) : " + $scope.videoDownload)
             console.log("Ratio (min|avg|max) : " + $scope.videoRatio)
-
             if ($scope.chartCount % 2 === 0) {
                 var time = getTimeForPlot();
                 $scope.plotPoint('buffer', type, bufferLevel, time);
