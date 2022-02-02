@@ -304,14 +304,13 @@ def runExp(qdisc, argsDict):
     getExp(qdisc, serverProcs, clientProcs, argsDict)
     
     print(f"Waiting for test {qdisc} to complete...")
-    time.sleep(argsDict['duration'])
+    for i in clientProcs:
+        if(i != 'dashClient' and i != 'udpBurstClient'):
+            clientProcs[i].communicate()
     clientProcs['dashClient'].terminate()
     clientProcs['udpBurstClient'].terminate()
     clientProcs['dashClient'].communicate()
     clientProcs['udpBurstClient'].communicate()
-    for i in clientProcs:
-        if(i != 'dashClient' and i != 'udpBurstClient'):
-            clientProcs[i].communicate()
     print("Waiting for server processes to shutdown...")
     for i in serverProcs:
         serverProcs[i].terminate()
