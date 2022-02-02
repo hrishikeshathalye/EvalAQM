@@ -80,8 +80,8 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     qdiscParams = {}
     if(qdisc != 'cake' and qdisc != 'cobalt'):
         qdiscParams["limit"] = argsDict['RtoRlimit']
-    if(qdisc == "fq_minstrel_pie"):
-        qdiscParams['minstrel'] = ""
+    if(qdisc == "fq_adaptive_pie"):
+        qdiscParams['adaptive'] = ""
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'fq_pie', **qdiscParams)
     elif(qdisc == "cobalt"):
         qdiscParams["unlimited"] = ""
@@ -98,7 +98,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     connections['r2_r1'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'])
 
     with routers[1]:
-        #On R1 : Disabling offloads, starting ssh-server, running ethtool, tc and ip link to get metadata relating to config
+        #On R1 : Disabling offloads, running ethtool, tc and ip link to get metadata relating to config
         proc = subprocess.Popen(
             shlex.split(f"sudo ethtool -K  {connections[f'r1_r2'].id} gro off gso off tso off ufo off lro off"),
             stdout=subprocess.PIPE,
@@ -115,12 +115,6 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
             )
-        proc = subprocess.Popen(
-            ['/usr/sbin/sshd'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-        serverProcs['sshr1r2'] = proc
         proc = subprocess.Popen(
             shlex.split(f"ethtool -k {connections[f'r1_r2'].ifb.id}"),
             stdout=open(f"ethtool/{qdisc}/ethtool_{qdisc}", "w"),
@@ -204,7 +198,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     #Sleep to make sure all server processes are up
     time.sleep(10)
 
-    #Start tcpdump on router R2
+    #Start tcpdump on router R1
     with routers[1]:
         cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
         proc = subprocess.Popen(
@@ -310,13 +304,18 @@ def runExp(qdisc, argsDict):
     getExp(qdisc, serverProcs, clientProcs, argsDict)
     
     print(f"Waiting for test {qdisc} to complete...")
+    time.sleep(argsDict['duration'])
+    clientProcs['dashClient'].terminate()
+    clientProcs['udpBurstClient'].terminate()
+    clientProcs['dashClient'].communicate()
+    clientProcs['udpBurstClient'].communicate()
     for i in clientProcs:
-        if(i == 'dashClient' or i == 'udpBurstClient'):
-            clientProcs[i].terminate()
-        clientProcs[i].communicate()
+        if(i != 'dashClient' and i != 'udpBurstClient'):
+            clientProcs[i].communicate()
     print("Waiting for server processes to shutdown...")
     for i in serverProcs:
         serverProcs[i].terminate()
+        serverProcs[i].communicate()
 
 def myArgumentParser() :
     argsDict = {}
@@ -411,7 +410,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["pfifo", "codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
+    qdiscs = ["fq_pie"]
     os.umask(0)
     dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
     for i in dirs:

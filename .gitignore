@@ -26,6 +26,7 @@ ipcmd
 ethtool
 tc
 udpBurstDebug_*
+data.txt
 
 # Ignore dash files
 dash_*
