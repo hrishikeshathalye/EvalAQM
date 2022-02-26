@@ -9,11 +9,14 @@ import signal
 import argparse
 import time
 
-def getExp(qdisc, serverProcs, clientProcs, argsDict):
+statsProc = ""
 
+def getExp(qdisc, serverProcs, clientProcs, argsDict):
+    
     sources = {}
     dests = {}
     routers = {}
+    global statsProc
     
     for i in range(1, 7):
         #Create 6 Source and Destination Nodes
@@ -208,6 +211,19 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         )
         serverProcs['tcpdumpr1r2'] = proc
 
+    proc = subprocess.Popen(
+        shlex.split("rm tmp.txt adaptiveStats.txt"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    proc.communicate()
+    
+    statsProc = subprocess.Popen(
+        shlex.split("./collectStats.sh"),
+        stdout=open("tmp.txt", "w"),
+        stderr=subprocess.DEVNULL
+    )
+
     #Second element is a list, but procName is assigned only for last process in the list
     clientCmds = {
         #flent voip test - S1
@@ -297,7 +313,6 @@ def runExp(qdisc, argsDict):
     #clientProcs includes all those processes that will be started after corresponding serverProcs have started,
     #communicate() is called on these processes to wait for them to terminate, except dash client (d6_r2)
     clientProcs={}
-    
     os.umask(0)
     os.mkdir(qdisc, mode=0o777)
 
@@ -314,7 +329,19 @@ def runExp(qdisc, argsDict):
     print("Waiting for server processes to shutdown...")
     for i in serverProcs:
         serverProcs[i].terminate()
-        serverProcs[i].communicate()
+    statsProc.kill()
+    proc = subprocess.Popen(
+        shlex.split("sudo killall -9 dmesg"),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
+    proc.communicate()
+    proc = subprocess.Popen(
+        shlex.split("grep fqAdaptiveStatsEnqueue tmp.txt"),
+        stdout=open("adaptiveStats.txt", "w"),
+        stderr=subprocess.DEVNULL
+    )
+    proc.communicate()
 
 def myArgumentParser() :
     argsDict = {}
@@ -409,7 +436,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["fq_pie"]
+    qdiscs = ["fq_adaptive_pie"]
     os.umask(0)
     dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
     for i in dirs:

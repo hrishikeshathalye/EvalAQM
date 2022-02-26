@@ -1,6 +1,6 @@
 #!/bin/bash
 
-q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie")
+q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie" "fq_adaptive_pie")
 
 tcpdumpfolder="$PWD""/tcpdump/"
 graphfolder="$PWD""/Graphs"

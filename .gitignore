@@ -27,6 +27,8 @@ ethtool
 tc
 udpBurstDebug_*
 data.txt
+tmp.txt
+adaptiveStats.txt
 
 # Ignore dash files
 dash_*

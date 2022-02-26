@@ -14,7 +14,7 @@ fi
 mkdir $graph_dir
 graph_dir="$PWD""/$graph_dir"
 
-q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie")
+q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie" "fq_adaptive_pie")
 chmod 0777 scraper.sh
 
 echo -ne "Generating Graphs: 0%"\\r
@@ -50,7 +50,7 @@ do
     it=`expr $it + 1`
 done
 
-dash_data=("dash_cake" "dash_cobalt" "dash_fq_codel" "dash_fq_pie" "dash_pfifo" "dash_pie" "dash_codel")
+dash_data=("dash_cake" "dash_cobalt" "dash_fq_codel" "dash_fq_pie" "dash_pfifo" "dash_pie" "dash_codel" "dash_fq_adaptive_pie")
 
 it=1
 for i in "${dash_data[@]}"
