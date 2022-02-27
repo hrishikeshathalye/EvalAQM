@@ -436,7 +436,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["fq_adaptive_pie"]
+    qdiscs = ["fq_pie", "fq_adaptive_pie"]
     os.umask(0)
     dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
     for i in dirs:
@@ -459,8 +459,10 @@ if __name__ == "__main__":
             pass
         runExp(qdisc, argsDict)
 
-    subprocess.call(['bash', './scripts/run.sh'])
+    # subprocess.call(['bash', './scripts/run.sh'])
+    subprocess.call(['bash', './scripts/run_2.sh'])
 
     bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes few minutes (Y/N)")
     if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
-        subprocess.call(['bash', './scripts/pcap_scrap.sh'])
+        # subprocess.call(['bash', './scripts/pcap_scrap.sh'])
+        subprocess.call(['bash', './scripts/pcap_scrap_2.sh'])
