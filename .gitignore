@@ -15,6 +15,7 @@ pfifo
 codel
 pie
 fq_pie
+fq_adaptive_pie
 cake
 fq_codel
 cobalt
