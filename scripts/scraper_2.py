@@ -90,6 +90,7 @@ for iteration in range(2):
         mos_file = "mos_file_adaptive.txt"
 
     f = open(data_file, "w+")
+    n = len(dic["x_values"])
     for i in range(n):
         f.write(f"{dic['x_values'][i]}")
         for j, resul in enumerate(y_axis):
