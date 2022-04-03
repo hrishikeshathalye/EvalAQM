@@ -409,7 +409,7 @@ if __name__ == "__main__":
     if argsDict['AppArmorFlag'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["fq_pie"]
+    qdiscs = ["codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
     os.umask(0)
     dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
     for i in dirs:

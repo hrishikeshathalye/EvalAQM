@@ -19,6 +19,7 @@ cake
 fq_codel
 cobalt
 fq_minstrel_pie
+fq_adaptive_pie
 dash_*
 flent
 tcpdump

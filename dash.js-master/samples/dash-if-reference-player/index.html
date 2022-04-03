@@ -37,20 +37,19 @@
 
     <!-- Google Cast -->
     <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
-
 </head>
 <body ng-controller="DashController">
 <script>
-    window.onload = function(){
-    var button = document.getElementById('load1');
-    var latencyCheck = document.getElementById("lowLatencyModeCB");
-    latencyCheck.checked = false;
-    var liveCatchupCheck = document.getElementById("liveCatchupCB");
-    liveCatchupCheck.checked = false;
-    var tmp = document.getElementById("lowLatencyModeEnabledByManifestCB");
-    tmp.checked = false;
-    button.click()
-}
+    window.addEventListener('load', (event) => {
+        var button = document.getElementById('load1');
+        var latencyCheck = document.getElementById("lowLatencyModeCB");
+        latencyCheck.checked = false;
+        var liveCatchupCheck = document.getElementById("liveCatchupCB");
+        liveCatchupCheck.checked = false;
+        var tmp = document.getElementById("lowLatencyModeEnabledByManifestCB");
+        tmp.checked = false;
+        button.click();
+    });
 </script>
 <!-- Mobile Stream Menu-->
 <div class="modal fade" id="streamModal">
