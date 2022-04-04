@@ -249,7 +249,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         f"./scripts/udpBurst.sh"
         )]),
         #chrome dash process - D6
-        'dashClient':(dests[6],["xhost +", f"google-chrome --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/samples/dash-if-reference-player/index.html"]),
+        'dashClient':(dests[6],["xhost +",f"sudo rm -rf chromeTmpDir", f"chromium --user-data-dir=chromeTmpDir --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/samples/dash-if-reference-player/index.html"]),
         #flent qdisc_stats - R1
         'qdiscStats':(routers[1], [(
             f"flent qdisc-stats "
@@ -280,7 +280,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
-                        stderr=open(f"dash_files/dash_{qdisc}","w")
+                        stderr=open(f"dash_files/{qdisc}/dash_{qdisc}","w")
                     )
                 else:
                     proc = subprocess.Popen(
@@ -345,11 +345,11 @@ def myArgumentParser() :
         if args.RtoRbandwidth.isdigit() == True : 
             argsDict["RtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else : 
-            print("Invalid RtoRbancwidth value.... moving to defaults.... 10mbit")
-            argsDict["RtoRbandwidth"] = '10mbit'
+            print("Invalid RtoRbancwidth value.... moving to defaults.... 100mbit")
+            argsDict["RtoRbandwidth"] = '100mbit'
     else :
-        print("Setting default router to router bandwidth 10mbit....")
-        argsDict["RtoRbandwidth"] = '10mbit'
+        print("Setting default router to router bandwidth 100mbit....")
+        argsDict["RtoRbandwidth"] = '100mbit'
     
     if args.HtoRdelay :
         if args.HtoRdelay.isdigit() == True :
@@ -364,11 +364,11 @@ def myArgumentParser() :
         if args.HtoRbandwidth.isdigit() == True :
             argsDict["HtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
         else :
-            print("Invalid HtoRbandwidth.... moving to defaults.... 100mbit")
-            argsDict["HtoRbandwidth"] = '100mbit'
+            print("Invalid HtoRbandwidth.... moving to defaults.... 1000mbit")
+            argsDict["HtoRbandwidth"] = '1000mbit'
     else :
-        print("Setting default host to router bandwidth 100mbit....")
-        argsDict["HtoRbandwidth"] = '100mbit'
+        print("Setting default host to router bandwidth 1000mbit....")
+        argsDict["HtoRbandwidth"] = '1000mbit'
     
     if args.AppArmorFlag :
         if args.AppArmorFlag == 1 :
@@ -418,9 +418,11 @@ if __name__ == "__main__":
             for j in qdiscs:
                 os.mkdir(f"{i}/{j}", mode=0o777)
         except FileExistsError:
-            shutil.rmtree(i)
-            os.mkdir(i, mode=0o777)
             for j in qdiscs:
+                try:
+                    shutil.rmtree(f"{i}/{j}")
+                except FileNotFoundError:
+                    pass
                 os.mkdir(f"{i}/{j}", mode=0o777)
     
     os.chmod("./scripts/udpBurst.sh", mode=0o777)

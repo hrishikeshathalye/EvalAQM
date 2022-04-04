@@ -50,16 +50,11 @@ do
     it=`expr $it + 1`
 done
 
-dash_data=("dash_cake" "dash_cobalt" "dash_fq_codel" "dash_fq_pie" "dash_pfifo" "dash_pie" "dash_codel")
-
 it=1
-for i in "${dash_data[@]}"
+for i in "${q_discs[@]}"
 do
-    j_name="${i:5}"
-    direc="$graph_dir""/$j_name"
-    len=`expr length $i`
-    filen=${i:5:$len}
-    "$script" "../dash_files/$i" 2 $direc $filen
+    direc="$graph_dir""/$i"
+    "$script" "../dash_files/$i/dash_$i" 2 $direc $i
     mul=`expr 3 \* $it`
     echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
     it=`expr $it + 1`

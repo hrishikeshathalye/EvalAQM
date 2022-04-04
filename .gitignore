@@ -28,6 +28,7 @@ ethtool
 tc
 udpBurstDebug_*
 data.txt
+chromeTmpDir
 
 # Ignore dash files
 dash_*

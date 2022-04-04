@@ -38,8 +38,8 @@ def mos_score(T, loss):
     if Ta <= 100:
         Idd = 0
     else:
-        Idd = 25 * ((1 + X**5)**(1 / 5) - 3 *
-                    (1 + (X / 3)**5)**(1 / 5) + 2)  # (7-27)
+        Idd = 25 * ((1 + X**6)**(1 / 6) - 3 *
+                    (1 + (X / 3)**6)**(1 / 6) + 2)  # (7-27)
 
     Idle = (Ro - Rle) / 2 + sqrt((Ro - Rle)**2 / 4 + 169)  # (7-25)
 
@@ -115,7 +115,8 @@ if foldername.find("voip") != -1:
 f = open("out.txt", "w+")
 for i, item in enumerate(y_axis):
     f.write(f"{i + 2}\n")  # 1:option
-    f.write(f"{item['data']}\n")  # y-axis name
+    yaxisName = item['data'].replace("::", "_")
+    f.write(f"{yaxisName}\n")  # y-axis name
     f.write(f"{item['max']}\n")   # y-range max
     f.write(f"{item['min']}\n")   # y-range min
     f.write(f"{int(dic['x_values'][n - 1]) + 1}\n") # x-range max
