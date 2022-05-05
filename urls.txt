@@ -1,1 +1,1 @@
-http://10.0.0.3:1234/test.txt
+http://10.0.0.3:1234/assets/test.txt

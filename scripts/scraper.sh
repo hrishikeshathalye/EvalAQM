@@ -36,7 +36,7 @@ if [ $type == 1 ]
                 rm -r $foldername
         fi
     else
-        foldername="$(cut -d'_' -f1 <<<"$filename")"
+        foldername="dash"
         if [ -d "$foldername" ]
             then
                 rm -r $foldername

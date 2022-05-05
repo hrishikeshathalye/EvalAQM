@@ -1,6 +1,0 @@
-[Apr 1 23:34] device f63ba0ddb4-39 entered promiscuous mode
-[  +1.266880] htb: netem qdisc 11: is non-work-conserving?
-[  +0.050131] htb: netem qdisc 11: is non-work-conserving?
-[  +0.015118] htb: netem qdisc 11: is non-work-conserving?
-[  +1.276788] ath10k_pci 0000:01:00.0: invalid ht params rate 1440 100kbps nss 2 mcs 7
-[  +0.001407] ath10k_pci 0000:01:00.0: invalid ht params rate 1440 100kbps nss 2 mcs 7

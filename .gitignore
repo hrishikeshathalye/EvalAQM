@@ -10,28 +10,10 @@ __pycache__
 
 # Ignore NeST output
 *_dump/
-noqueue
-pfifo
-codel
-pie
-fq_pie
-cake
-fq_codel
-cobalt
-fq_minstrel_pie
-fq_adaptive_pie
-dash_*
+data
+debug
 flent
-tcpdump
-ipcmd
-ethtool
-tc
-udpBurstDebug_*
-data.txt
 chromeTmpDir
-
-# Ignore dash files
-dash_*
 
 # Ignore Graphs
 Graphs

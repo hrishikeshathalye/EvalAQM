@@ -1,12 +1,10 @@
 from nest.experiment import *
 from nest.topology import *
-import sys
 import os
 import shutil
 import subprocess
 import shlex
-import signal
-import argparse
+import configparser
 import time
 
 def getExp(qdisc, serverProcs, clientProcs, argsDict):
@@ -89,7 +87,6 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         qdiscParams["besteffort"] = ""
         qdiscParams["flowblind"] = ""
         qdiscParams["no-ack-filter"] = ""
-        qdiscParams["rtt"] = "100ms"
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], 'cake', **qdiscParams)
     elif(qdisc != "" and qdisc != "noqueue"):
         connections['r1_r2'].set_attributes(argsDict['RtoRbandwidth'], argsDict['RtoRdelay'], qdisc, **qdiscParams)
@@ -117,17 +114,17 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
             )
         proc = subprocess.Popen(
             shlex.split(f"ethtool -k {connections[f'r1_r2'].ifb.id}"),
-            stdout=open(f"ethtool/{qdisc}/ethtool_{qdisc}", "w"),
+            stdout=open(f"debug/ethtool/ethtool_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
         proc = subprocess.Popen(
             shlex.split(f"tc -s qdisc ls"),
-            stdout=open(f"tc/{qdisc}/tc_{qdisc}", "w"),
+            stdout=open(f"debug/tc/tc_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )  
         proc = subprocess.Popen(
             shlex.split(f"ip -s link"),
-            stdout=open(f"ipcmd/{qdisc}/ip_{qdisc}", "w"),
+            stdout=open(f"debug/ip/ip_{qdisc}", "w"),
             stderr=subprocess.DEVNULL
         )
 
@@ -198,9 +195,18 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     #Sleep to make sure all server processes are up
     time.sleep(10)
 
+    os.mkdir(f'data/{qdisc}/s1_r1')
+    os.mkdir(f'data/{qdisc}/s2_r1')
+    os.mkdir(f'data/{qdisc}/d3_r2')
+    os.mkdir(f'data/{qdisc}/s4_r1')
+    os.mkdir(f'data/{qdisc}/s5_r1')
+    os.mkdir(f'data/{qdisc}/d6_r2')
+    os.mkdir(f'data/{qdisc}/disc_stats')
+    os.mkdir(f'data/{qdisc}/tcpdump')
+
     #Start tcpdump on router R1
     with routers[1]:
-        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w tcpdump/{qdisc}/r1_r2.pcap"
+        cmd = f"tcpdump -i {connections[f'r1_r2'].id} -w data/{qdisc}/tcpdump/r1_r2.pcap"
         proc = subprocess.Popen(
             shlex.split(cmd),
             stdout=subprocess.PIPE,
@@ -213,16 +219,16 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         #flent voip test - S1
         'flentVoip':(sources[1], [(
         f"flent voip "
-        f" -D {qdisc}/s1_r1"
-        f" --length {argsDict['duration']}"
+        f" -D data/{qdisc}/s1_r1"
+        f" --length {argsDict['Duration']}"
         f" --host {connections[f'd1_r2'].address.get_addr(with_subnet=False)}"
         " --socket-stats"
         )]),
         #flent quake test - S2
         'flentQuake':(sources[2], [(
         f"flent quake "
-        f" -D {qdisc}/s2_r1"
-        f" --length {argsDict['duration']}"
+        f" -D data/{qdisc}/s2_r1"
+        f" --length {argsDict['Duration']}"
         f" --host {connections[f'd2_r2'].address.get_addr(with_subnet=False)}"
         " --socket-stats"
         )]),
@@ -231,16 +237,16 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         f"flent http "
         f" --http-getter-urllist=urls.txt"
         f" --http-getter-workers=1"
-        f" -D {qdisc}/d3_r2"
+        f" -D data/{qdisc}/d3_r2"
         f" -s 1"
-        f" --length {argsDict['duration']}"
+        f" --length {argsDict['Duration']}"
         f" --host {connections[f's3_r1'].address.get_addr(with_subnet=False)}"
         )]),
         #flent tcp_1up - S4
         'flentTcp':(sources[4], [(
         f"flent tcp_1up "
-        f" -D {qdisc}/s4_r1"
-        f" --length {argsDict['duration']}"
+        f" -D data/{qdisc}/s4_r1"
+        f" --length {argsDict['Duration']}"
         f" --host {connections[f'd4_r2'].address.get_addr(with_subnet=False)}"
         " --socket-stats"
         )]),
@@ -253,34 +259,28 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         #flent qdisc_stats - R1
         'qdiscStats':(routers[1], [(
             f"flent qdisc-stats "
-            f" -D {qdisc}/disc_stats"
+            f" -D data/{qdisc}/disc_stats"
             f" --test-parameter interface={connections[f'r1_r2'].ifb.id}"
-            f" --length {argsDict['duration']}"
+            f" --length {argsDict['Duration']}"
             f" --host {connections[f'r1_r2'].address.get_addr(with_subnet=False)}"
         )])
     }
 
     #start all client processes
-    os.mkdir(f'{qdisc}/s1_r1')
-    os.mkdir(f'{qdisc}/s2_r1')
-    os.mkdir(f'{qdisc}/d3_r2')
-    os.mkdir(f'{qdisc}/s4_r1')
-    os.mkdir(f'{qdisc}/s5_r1')
-    os.mkdir(f'{qdisc}/disc_stats')
     for procName, nodeCmd in clientCmds.items():
         with nodeCmd[0]:
             for cmd in nodeCmd[1]:
                 if(procName == 'udpBurstClient'):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
-                        stdout=open(f"{qdisc}/s5_r1/udpBurstDebug", "w"),
+                        stdout=open(f"data/{qdisc}/s5_r1/udpBurstDebug", "w"),
                         stderr=subprocess.DEVNULL
                     )
                 elif(procName == 'dashClient'):
                     proc = subprocess.Popen(
                         shlex.split(cmd),
                         stdout=subprocess.PIPE,
-                        stderr=open(f"dash_files/{qdisc}/dash_{qdisc}","w")
+                        stderr=open(f"data/{qdisc}/d6_r2/dash_{qdisc}","w")
                     )
                 else:
                     proc = subprocess.Popen(
@@ -299,7 +299,6 @@ def runExp(qdisc, argsDict):
     clientProcs={}
     
     os.umask(0)
-    os.mkdir(qdisc, mode=0o777)
 
     getExp(qdisc, serverProcs, clientProcs, argsDict)
     
@@ -316,114 +315,58 @@ def runExp(qdisc, argsDict):
         serverProcs[i].terminate()
         serverProcs[i].communicate()
 
-def myArgumentParser() :
-    argsDict = {}
-    parser = argparse.ArgumentParser()
+def readConfig() :
 
-    #Add the optional arguements to the arguement class of program.
-    parser.add_argument("--RtoRdelay", help="Enter latency for router to router link")
-    parser.add_argument("--HtoRdelay", help="Enter latency for host to router link")
-    parser.add_argument("--RtoRbandwidth", help="Enter bandwidth for router to router link")
-    parser.add_argument("--HtoRbandwidth", help="Enter bandwidth for host to router link")
-    parser.add_argument("--AppArmorFlag", type=int, help="Enter 1 to disable app armor")
-    parser.add_argument("--duration", type=int, help="Enter test duration in secs")
-    parser.add_argument("--RtoRlimit", help="Enter Router to Router link limit")
-    args = parser.parse_args()
+    configParser = configparser.ConfigParser()
+    configParser.optionxform = str
+    configParser.read('config.ini')
+    config = configParser['DEFAULT']
+    argsDict = {}
+    for i in config:
+        argsDict[i] = config[i]
+    argsDict['AQM'] = argsDict['AQM'].split(",")
     
-    #Check for each optional arguement.
-    #If arguement not passed, set the default values.
-    if args.RtoRdelay :
-        if args.RtoRdelay.isdigit() == True :
-            argsDict["RtoRdelay"] = args.RtoRdelay + 'ms'
-        else :
-            print("Invalid RtoRdelay value.... moving to defaults.... 40ms")
-            argsDict["RtoRdelay"] = '40ms'
-    else :
-        print("Setting default router to router delay 40ms....")
-        argsDict["RtoRdelay"] = '40ms'
-    if args.RtoRbandwidth :
-        if args.RtoRbandwidth.isdigit() == True : 
-            argsDict["RtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
-        else : 
-            print("Invalid RtoRbancwidth value.... moving to defaults.... 100mbit")
-            argsDict["RtoRbandwidth"] = '100mbit'
-    else :
-        print("Setting default router to router bandwidth 100mbit....")
-        argsDict["RtoRbandwidth"] = '100mbit'
-    
-    if args.HtoRdelay :
-        if args.HtoRdelay.isdigit() == True :
-            argsDict["HtoRdelay"] = args.HtoRdelay + 'ms'
-        else :
-            print("Invalid HtoRdelay value.... moving to defaults.... 5ms")
-            argsDict["HtoRdelay"] = '5ms'
-    else :
-        print("Setting default host to router delay 5ms....")
-        argsDict["HtoRdelay"] = '5ms'
-    if args.HtoRbandwidth :
-        if args.HtoRbandwidth.isdigit() == True :
-            argsDict["HtoRbandwidth"] = args.RtoRbandwidth + 'mbit'
-        else :
-            print("Invalid HtoRbandwidth.... moving to defaults.... 1000mbit")
-            argsDict["HtoRbandwidth"] = '1000mbit'
-    else :
-        print("Setting default host to router bandwidth 1000mbit....")
-        argsDict["HtoRbandwidth"] = '1000mbit'
-    
-    if args.AppArmorFlag :
-        if args.AppArmorFlag == 1 :
-            argsDict['AppArmorFlag'] = 1
-        else : 
-            print("Invalid App Armor Flag value.... moving to defaults.... 0")
-            argsDict['AppArmorFlag'] = 0
-    else :
-        print("App armor flag not set....")
-        argsDict['AppArmorFlag'] = 0
-    
-    if args.duration :
-        print(f"Using Test Duration {int(args.duration)}s...")
-        argsDict['duration'] = int(args.duration)
-    else :
-        print("Using Default Duration 300s...")
-        argsDict['duration'] = 300
-    
-    if args.RtoRlimit :
-        if args.RtoRlimit.isdigit() == True :
-            argsDict['RtoRlimit'] = args.RtoRlimit
-        else : 
-            print("Invalid Router to Router limit value.... moving to defaults.... 400")
-            argsDict['RtoRlimit'] = "400"
-    else :
-        print("Setting default Router to Router limit 400....")
-        argsDict['RtoRlimit'] = "400"
-    
-    #Return the final dictionary of arguments with their values set.
     return argsDict
 
 
 if __name__ == "__main__":
     
-    argsDict = myArgumentParser()
+    argsDict = readConfig()
     print("Argument dictionary is : ", argsDict)
     
-    if argsDict['AppArmorFlag'] == 1 :
+    #If the appArmor flag is set use the disableAppArmor.sh script to disable appArmor for tcpdump
+    if argsDict['AppArmorDisable'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
-    qdiscs = ["codel", "pie", "fq_codel", "fq_pie", "cobalt", "cake"]
+    #List of AQM mechanisms to test for
+    qdiscs = argsDict['AQM']
     os.umask(0)
-    dirs = ["tcpdump", "ipcmd", "ethtool", "tc", "dash_files"]
-    for i in dirs:
-        try:
-            os.mkdir(i, mode=0o777)
-            for j in qdiscs:
-                os.mkdir(f"{i}/{j}", mode=0o777)
-        except FileExistsError:
-            for j in qdiscs:
-                try:
-                    shutil.rmtree(f"{i}/{j}")
-                except FileNotFoundError:
-                    pass
-                os.mkdir(f"{i}/{j}", mode=0o777)
+    dirs = ["data", "debug"]
+    debugDirs = ["ip", "ethtool", "tc"]
+    #Create data directory
+    try:
+        os.mkdir("data", mode=0o777)
+        for j in qdiscs:
+            os.mkdir(f"data/{j}", mode=0o777)
+    except FileExistsError:
+        for j in qdiscs:
+            try:
+                shutil.rmtree(f"data/{j}")
+            except FileNotFoundError:
+                pass
+            os.mkdir(f"data/{j}", mode=0o777)
+    #Create debug directory
+    try:
+        os.mkdir("debug", mode=0o777)
+        for j in debugDirs:
+            os.mkdir(f"debug/{j}", mode=0o777)
+    except FileExistsError:
+        for j in debugDirs:
+            try:
+                shutil.rmtree(f"debug/{j}")
+            except FileNotFoundError:
+                pass
+            os.mkdir(f"debug/{j}", mode=0o777)
     
     os.chmod("./scripts/udpBurst.sh", mode=0o777)
 
@@ -434,8 +377,10 @@ if __name__ == "__main__":
             pass
         runExp(qdisc, argsDict)
 
+    #Call script to generate graphs
     subprocess.call(['bash', './scripts/run.sh'])
 
-    bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes few minutes (Y/N)")
+    #Optionally, call script to generate bandwidth consumption analysis graphs
+    bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes a few minutes (Y/N)")
     if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
         subprocess.call(['bash', './scripts/pcap_scrap.sh'])
