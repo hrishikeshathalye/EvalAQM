@@ -11,3 +11,4 @@ HtoRdelay : Delay in link between hosts and router in 'ms' (default : '5ms')
 HtoRbandwidth : Bandwidth of link between host and router in 'mbit' (defualt : '100mbit')
 AppArmorFlag : equals 1 then run script to disable app armor (default : 0)
 
+git clone --recursive https://github.com/meme/myRepo.git FOLDER_NAME
