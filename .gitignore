@@ -12,8 +12,8 @@ __pycache__
 *_dump/
 data
 debug
-flent
 chromeTmpDir
+assets/bbb
 
 # Ignore Graphs
 Graphs

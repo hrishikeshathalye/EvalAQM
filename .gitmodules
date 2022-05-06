@@ -1,0 +1,6 @@
+[submodule "ditg"]
+	path = ditg
+	url = https://github.com/jbucar/ditg.git
+[submodule "flent"]
+	path = flent
+	url = https://github.com/hrishikeshathalye/flent.git

@@ -1,6 +1,0 @@
-newran.lfl
-tryrand
-tryurng
-geturng
-nr_ex
-test_lg
