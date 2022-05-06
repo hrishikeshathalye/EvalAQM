@@ -32,15 +32,15 @@ do
         if [ $j == 5 ]
             then
                 file=$(ls "../data/$i/disc_stats")
-                "$script" "../data/$i/disc_stats/""$file" 1 $direc $i
+                "$script" "../data/$i/disc_stats/""$file" 1 $direc $i $1
             else
                 if [ $j == 3 ]
                     then
                         file=$(ls "../data/$i/d$j""_r2")
-                        "$script" "../data/$i/d$j""_r2/""$file" 1 $direc $i
+                        "$script" "../data/$i/d$j""_r2/""$file" 1 $direc $i $1
                     else
                         file=$(ls "../data/$i/s$j""_r1")
-                        "$script" "../data/$i/s$j""_r1/""$file" 1 $direc $i
+                        "$script" "../data/$i/s$j""_r1/""$file" 1 $direc $i $1
                 fi
         fi
         com=`expr $it \* 12`
@@ -54,7 +54,7 @@ it=1
 for i in "${q_discs[@]}"
 do
     direc="$graph_dir""/$i"
-    "$script" "../data/$i/d6_r2/dash_$i" 2 $direc $i
+    "$script" "../data/$i/d6_r2/dash_$i" 2 $direc $i $1
     mul=`expr 3 \* $it`
     echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
     it=`expr $it + 1`

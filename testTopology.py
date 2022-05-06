@@ -326,7 +326,7 @@ if __name__ == "__main__":
     argsDict = readConfig()
     print("Argument dictionary is : ", argsDict)
     
-    #If the appArmor flag is set use the disableAppArmor.sh script to disable appArmor for tcpdump
+    # If the appArmor flag is set use the disableAppArmor.sh script to disable appArmor for tcpdump
     if argsDict['AppArmorDisable'] == 1 :
         subprocess.call(['sh', './scripts/disableAppArmor.sh'])
 
@@ -369,10 +369,11 @@ if __name__ == "__main__":
             pass
         runExp(qdisc, argsDict)
 
+    duration = int(argsDict['Duration'])+1
     #Call script to generate graphs
-    subprocess.call(['bash', './scripts/run.sh'])
+    subprocess.run(f'./scripts/run.sh {duration}', shell=True)
 
     #Optionally, call script to generate bandwidth consumption analysis graphs
     bandwidthplot_choice = input("\nDo you wish to plot bandwidth graphs?\nThis takes a few minutes (Y/N)")
     if bandwidthplot_choice == 'Y' or bandwidthplot_choice == 'y':
-        subprocess.call(['bash', './scripts/pcap_scrap.sh'])
+        subprocess.run(f'./scripts/pcap_scrap.sh {duration}', shell=True)

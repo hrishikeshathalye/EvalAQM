@@ -7,6 +7,7 @@ outfile="out.txt"
 data="data.txt"
 graph_dir=$3
 q_disc=$4
+duration=$5
 
 if [ $# -eq 0 ]
     then
@@ -96,7 +97,7 @@ while [ $a -lt $loops ]
         path="$foldername/$y_axis"
         y_axis=$(echo "$y_axis" | tr _ -)
         q_disc=$(echo "$q_disc" | tr _ -)
-        gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:301]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
+        gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
         a=`expr $a + 1`
     done
 

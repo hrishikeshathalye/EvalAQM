@@ -8,7 +8,7 @@ print(f"Reading {q_disc} packets....")
 start_time = 0
 
 data_sent = [0] * 6
-time = 1
+time = 0.2
 
 f = open("data.txt", "w+")
 
@@ -29,10 +29,10 @@ with scapy.PcapReader(f"{sys.argv[1]}/r1_r2.pcap") as pr:
             for j in data_sent:
                 sum += j
             sum *= 10
-            sum = sum / 125000
-            f.write(f"{time}\t{data_sent[0]/125000}\t{data_sent[1]/125000}\t{data_sent[2]/125000}\t{data_sent[3]/125000}\t{data_sent[4]/125000}\t{data_sent[5]/125000}\t{sum}\n")
-            time += 1
-            if time == 301:
+            sum = sum / 25000
+            f.write(f"{time}\t{data_sent[0]/25000}\t{data_sent[1]/25000}\t{data_sent[2]/25000}\t{data_sent[3]/25000}\t{data_sent[4]/25000}\t{data_sent[5]/25000}\t{sum}\n")
+            time += 0.2
+            if time > 300:
                 break
             data_sent = [0] * 6
             sum = 0
