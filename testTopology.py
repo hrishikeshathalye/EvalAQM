@@ -247,7 +247,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         f"./scripts/udpBurst.sh"
         )]),
         #chrome dash process - D6
-        'dashClient':(dests[6],["xhost +",f"sudo rm -rf chromeTmpDir", f"chromium --user-data-dir=chromeTmpDir --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/dash-if-reference-player/index.html"]),
+        'dashClient':(dests[6],["xhost +",f"sudo rm -rf chromeTmpDir", f"chromium --user-data-dir=chromeTmpDir --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://10.0.0.6:3000/dash.js-master/samples/dash-if-reference-player/index.html"]),
         #flent qdisc_stats - R1
         'qdiscStats':(routers[1], [(
             f"flent qdisc-stats "
