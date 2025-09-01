@@ -303,7 +303,7 @@ class DITGManager(object):
         try:
             proc = subprocess.Popen(['ITGRecv',
                                      '-l', logfile,
-                                     '-I',
+                                    #  '-I',
                                      '-a', self.bind_address,
                                      '-Sp', str(port)])
 
