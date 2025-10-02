@@ -1,6 +1,6 @@
 #!/bin/bash
 
-q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie")
+q_discs=("pfifo" "fq_pie" "fq_codel" "noqueue" "cake" "codel" "pie")
 
 graphfolder="$PWD""/Graphs"
 data="data.txt"
@@ -23,7 +23,11 @@ do
     echo "Generating graphs for $i"
 
     tit=$(echo "$i" | tr _ -)
-    gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bandwidth.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 12]; set title '$tit'; plot 'data.txt' using 1:2 title 'Voip' w l lt 1, 'data.txt' using 1:3 title 'Quake' w l lt 2, 'data.txt' using 1:4 title 'HTTP' w l lt 3, 'data.txt' using 1:5 title 'TCP 1up' w l lt 4, 'data.txt' using 1:6 title 'UDP' w l lt 7, 'data.txt' using 1:7 title 'DASH' w l lt 6"
+    # gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bandwidth.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 12]; set title '$tit'; plot 'data.txt' using 1:2 title 'Voip' w l lt 1, 'data.txt' using 1:3 title 'Quake' w l lt 2, 'data.txt' using 1:4 title 'HTTP' w l lt 3, 'data.txt' using 1:5 title 'TCP 1up' w l lt 4, 'data.txt' using 1:6 title 'UDP' w l lt 7, 'data.txt' using 1:7 title 'DASH' w l lt 6"
+    gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bandwidth.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 12]; set title '$tit'; plot 'data.txt' using 1:2 title 'Voip' w l lt 1, 'data.txt' using 1:3 title 'Quake' w l lt 2, 'data.txt' using 1:4 title 'HTTP' w l lt 3, 'data.txt' using 1:5 title 'TCP 1up' w l lt 4, 'data.txt' using 1:6 title 'UDP' w l lt 7"
+    gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bw_voip_quake.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 0.5]; set title '$tit'; plot 'data.txt' using 1:2 title 'Voip' w l lt 1, 'data.txt' using 1:3 title 'Quake' w l lt 2"
+    gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bw_http.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 12]; set title '$tit'; plot 'data.txt' using 1:4 title 'HTTP' w l lt 3"
+    gnuplot -e "set key maxrows 2; set key font ',8'; set terminal png size 400,300; set output '$fol/Application_bw_tcp_udp.png'; set xlabel 'Time(s)'; set ylabel 'Rate(mbps)'; set xrange [-1:$duration]; set yrange [0: 12]; set title '$tit'; plot 'data.txt' using 1:5 title 'TCP 1up' w l lt 4, 'data.txt' using 1:6 title 'UDP' w l lt 7"
     gnuplot -e "set terminal png size 400,300; set output '$fol/Link_Utilisation.png'; set xlabel 'Time(s)'; set ylabel 'Utilisation in %'; set xrange [-1:$duration]; set yrange [0: 120]; set title 'Link Utilisation'; plot 'data.txt' using 1:8 title '$tit' w l lt 1"
     # cp $data "$i""_pcap.txt"
     rm $data

@@ -14,7 +14,7 @@ fi
 mkdir $graph_dir
 graph_dir="$PWD""/$graph_dir"
 
-q_discs=("pfifo" "fq_pie" "fq_codel" "cobalt" "cake" "codel" "pie")
+q_discs=("pfifo" "fq_pie" "fq_codel" "noqueue" "cake" "codel" "pie")
 chmod 0777 scraper.sh
 
 echo -ne "Generating Graphs: 0%"\\r
@@ -51,14 +51,14 @@ do
 done
 
 it=1
-for i in "${q_discs[@]}"
-do
-    direc="$graph_dir""/$i"
-    "$script" "../data/$i/d6_r2/dash_$i" 2 $direc $i $1
-    mul=`expr 3 \* $it`
-    echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
-    it=`expr $it + 1`
-done
+# for i in "${q_discs[@]}"
+# do
+#     direc="$graph_dir""/$i"
+#     "$script" "../data/$i/d6_r2/dash_$i" 2 $direc $i $1
+#     mul=`expr 3 \* $it`
+#     echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
+#     it=`expr $it + 1`
+# done
 echo "Generating Graphs: 100%"
 
 echo "Completed"

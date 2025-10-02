@@ -2,7 +2,7 @@
 
 
 
-qdiscs=("fq_codel" "fq_pie" "pie" "codel" "cobalt" "cake")
+qdiscs=("fq_codel" "fq_pie" "pie" "codel" "noqueue" "cake")
 graph_fold="Graphs-EPS"
 mkdir $graph_fold
 

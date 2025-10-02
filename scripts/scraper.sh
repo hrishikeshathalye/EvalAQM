@@ -97,7 +97,14 @@ while [ $a -lt $loops ]
         path="$foldername/$y_axis"
         y_axis=$(echo "$y_axis" | tr _ -)
         q_disc=$(echo "$q_disc" | tr _ -)
-        gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
+        echo "$y_axis"
+        plot_type="l"
+        if [[ $y_axis == *"Quake-loss"* || $y_axis == *"qdisc-stats-dropped"* || $y_axis == *"HTTP latency"* ]]
+            then
+                plot_type="p"
+        fi
+        # gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
+        gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w $plot_type"
         a=`expr $a + 1`
     done
 
