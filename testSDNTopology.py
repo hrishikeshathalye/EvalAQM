@@ -18,7 +18,7 @@ class SDNAQMTopo(Topo):
     def build(self):
         self.addSwitch('r1', protocols='OpenFlow13')
         self.addSwitch('r2', protocols='OpenFlow13')
-        for i in range(1, 7):
+        for i in range(1, 6):
             self.addHost(f's{i}')
             self.addHost(f'd{i}')
             self.addLink(f's{i}', 'r1', cls=TCLink, bw=100, delay='5ms')
@@ -46,65 +46,37 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     time.sleep(10)
     
     # Assign IPs to hosts
-    for i in range(1, 7):
+    for i in range(1, 6):
         net.get(f's{i}').setIP(f'10.0.0.{i}/8', intf=f's{i}-eth0')
         net.get(f'd{i}').setIP(f'10.2.0.{i}/8', intf=f'd{i}-eth0')
     
-    # for i in range(1, 7) :
-    #     net.get(f's{i}').cmd(f'ip route add 10.2.0.{i}/24 dev s{i}-eth0')
-    #     net.get(f'd{i}').cmd(f'ip route add 10.0.0.{i}/24 dev d{i}-eth0')
-    
     # net.pingAll()
-    
-    # Set up link parameters and AQM algorithm at corresponding interfaces
+
     r1 = net.get('r1')
     r2 = net.get('r2')
-    # r1.cmd(getBwString(f'r1-eth7'))
-    # r1.cmd(getBwClassString(f'r1-eth7', argsDict['RtoRbandwidth']))
-    # r1.cmd(getDelayString(f'r1-eth7', argsDict['RtoRdelay']))
 
-    if qdisc not in ['cake', 'cobalt']:
+    if qdisc not in ['cake']:
         extra_params = f"limit {argsDict['RtoRlimit']}"
     else:
         extra_params = ''
 
-    if(qdisc == "cobalt"):
-        r1.cmd(f'tc qdisc add dev r1-eth7 parent 10: cake {extra_params} unlimited raw besteffort flowblind no-ack-filter')
+    # Set AQM with parameters
+    if(qdisc == "noqueue"):
+        pass
     elif qdisc not in ["", "noqueue"]:
-        r1.cmd(f'tc qdisc add dev r1-eth7 parent 10: {qdisc} {extra_params}')
+        r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} {extra_params}')
     
     print("Setup qdisc and class", end="\n")
-    r1.cmd(f'r1 tc -s qdisc show dev r1-eth7')
-    r1.cmd(f'r1 tc -s class show dev r1-eth7')
-
-    # for i in range(1,7):
-    #     net.get(f's{i}').cmd(getBwString(f's{i}-eth0'))
-    #     net.get(f's{i}').cmd(getBwClassString(f's{i}-eth0', argsDict['HtoRbandwidth']))
-    #     net.get(f's{i}').cmd(getDelayString(f's{i}-eth0', argsDict['HtoRdelay']))
-
-    #     net.get(f'd{i}').cmd(getBwString(f'd{i}-eth0'))
-    #     net.get(f'd{i}').cmd(getBwClassString(f'd{i}-eth0', argsDict['HtoRbandwidth']))
-    #     net.get(f'd{i}').cmd(getDelayString(f'd{i}-eth0', argsDict['HtoRdelay']))
-
-    #     r1.cmd(getBwString(f'r1-eth{i}'))
-    #     r1.cmd(getBwClassString(f'r1-eth{i}', argsDict['HtoRbandwidth']))
-    #     r1.cmd(getDelayString(f'r1-eth{i}', argsDict['HtoRdelay']))
-
-    #     r2.cmd(getBwString(f'r2-eth{i}'))
-    #     r2.cmd(getBwClassString(f'r2-eth{i}', argsDict['HtoRbandwidth']))
-    #     r2.cmd(getDelayString(f'r2-eth{i}', argsDict['HtoRdelay']))
-
-    # r2.cmd(getBwString(f'r2-eth7'))
-    # r2.cmd(getBwClassString(f'r2-eth7', argsDict['RtoRbandwidth']))
-    # r2.cmd(getDelayString(f'r2-eth7', argsDict['RtoRdelay']))
+    # r1.cmd(f'r1 tc -s qdisc show dev r1-eth6')
+    # r1.cmd(f'r1 tc -s class show dev r1-eth6')
 
     #Disable offloads on switch interfaces
     for i in range(1, 8) :
         r1.cmd(f"ethtool -K r1-eth{i} gro off gso off tso off ufo off lro off")
         r2.cmd(f"ethtool -K r2-eth{i} gro off gso off tso off ufo off lro off")
     
-    r1.popen(shlex.split(f'ethtool -k r1-eth7'), stdout=open(f'debug/ethtool/ethtool_{qdisc}', "w"), stderr=subprocess.DEVNULL)
-    r1.popen(shlex.split(f'tc -s qdisc show dev r1-eth7'), stdout=open(f'debug/tc/tc_{qdisc}', "w"), stderr=subprocess.DEVNULL)
+    r1.popen(shlex.split(f'ethtool -k r1-eth6'), stdout=open(f'debug/ethtool/ethtool_{qdisc}', "w"), stderr=subprocess.DEVNULL)
+    r1.popen(shlex.split(f'tc -s qdisc show dev r1-eth6'), stdout=open(f'debug/tc/tc_{qdisc}', "w"), stderr=subprocess.DEVNULL)
     r1.popen(shlex.split(f'ip -s link'), stdout=open(f'debug/ip/ip_{qdisc}', "w"), stderr=subprocess.DEVNULL)
 
     # Disable offloads on sources and destinations
@@ -114,14 +86,12 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
 
     # Create and start all the server commands
     s3_ip = '10.0.0.3'
-    s6_ip = '10.0.0.6'
     server_cmds = {
         'irttServer': (net.get('d1'), [f"irtt server -b 10.2.0.1"]),
         'ditgControlServer': (net.get('d2'), [f"python scripts/ditg-control-server.py -a 10.2.0.2 --insecure-xml"]),
         'httpServer': (net.get('s3'), [f"python3 -m http.server --bind {s3_ip} 1234"]),
         'netServer': (net.get('d4'), ["netserver -4"]),
         'iperfUdpServer': (net.get('d5'), ["iperf --server --udp --udp-histogram --bind 10.2.0.5"]),
-        'dashServer': (net.get('s6'), [f"python3 -m http.server --bind {s6_ip} 3000"])
     }
     for name, (host, cmds) in server_cmds.items():
         for cmd in cmds:
@@ -137,12 +107,11 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     os.mkdir(f'data/{qdisc}/d3_r2')
     os.mkdir(f'data/{qdisc}/s4_r1')
     os.mkdir(f'data/{qdisc}/s5_r1')
-    os.mkdir(f'data/{qdisc}/d6_r2')
     os.mkdir(f'data/{qdisc}/disc_stats')
     os.mkdir(f'data/{qdisc}/tcpdump')
 
     # Start tcpdump on switch R1
-    tcpdumpcmd = f"tcpdump -i r1-eth7 -w data/{qdisc}/tcpdump/r1_r2.pcap"
+    tcpdumpcmd = f"tcpdump -i r1-eth6 -w data/{qdisc}/tcpdump/r1_r2.pcap"
     proc = r1.popen(shlex.split(tcpdumpcmd), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     serverProcs['tcpdumpr1r2'] = proc
 
@@ -153,14 +122,12 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         'httpClient': (net.get('d3'), [f"flent http --http-getter-urllist=urls.txt --http-getter-workers=1 -D data/{qdisc}/d3_r2 -s 1 --length {duration} --host 10.0.0.3"]),
         'flentTcp': (net.get('s4'), [f"flent tcp_1up -D data/{qdisc}/s4_r1 --length {duration} --host 10.2.0.4 --socket-stats"]),
         'udpBurstClient': (net.get('s5'), ["./scripts/udpBurst.sh"]),
-        'dashClient': (net.get('d6'), ["xhost +", "rm -rf chromeTmpDir", f"chromium --user-data-dir=chromeTmpDir --no-sandbox --enable-logging=stderr --autoplay-policy=no-user-gesture-required --disable-gpu --disable-software-rasterizer http://{net.get('s6').IP()}:3000/dash.js-master-new/samples/dash-if-reference-player/index.html"]),
-        'qdiscStats': (net.get('r1'), [f"flent qdisc-stats -D data/{qdisc}/disc_stats --test-parameter interface=r1-eth7 --length {duration} -H localhost"])
+        'qdiscStats': (net.get('r1'), [f"flent qdisc-stats -D data/{qdisc}/disc_stats --test-parameter interface=r1-eth6 --length {duration} -H localhost"])
     }
+    r1.popen(shlex.split(f'tc -s qdisc show dev r1-eth6'), stdout=open(f'debug/tc/tc_{qdisc}2', "w"), stderr=subprocess.DEVNULL)
     for name, (host, cmds) in client_cmds.items():
         for cmd in cmds:
-            if name == 'dashClient':
-                proc = host.popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=open(f"data/{qdisc}/d6_r2/dash_{qdisc}", "w"))
-            elif name == 'udpBurstClient':
+            if name == 'udpBurstClient':
                 proc = host.popen(shlex.split(cmd), stdout=open(f"data/{qdisc}/s5_r1/udpBurstDebug", "w"), stderr=subprocess.DEVNULL)
             elif name == 'qdiscStats':
                 proc = host.popen(shlex.split(cmd), stdout=open(f"client_output.log", "w"), stderr=open(f"client_error.log", "w"))
@@ -184,9 +151,7 @@ def runExp(qdisc, argsDict):
     for i in clientProcs:
         if(i != 'dashClient' and i != 'udpBurstClient'):
             clientProcs[i].communicate()
-    clientProcs['dashClient'].terminate()
     clientProcs['udpBurstClient'].terminate()
-    clientProcs['dashClient'].communicate()
     clientProcs['udpBurstClient'].communicate()
     print("Waiting for server processes to shutdown...")
     for i in serverProcs:
@@ -252,6 +217,8 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
         runExp(qdisc, argsDict)
+        with open("flow_rules.log", "w") as f:
+            f.write(subprocess.run("ovs-ofctl -O OpenFlow13 dump-flows r1", shell=True, capture_output=True, text=True, check=True).stdout)
         net.stop()
 
     duration = int(argsDict['Duration'])+1
