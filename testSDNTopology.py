@@ -65,6 +65,8 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         pass
     elif qdisc not in ["", "noqueue"]:
         r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} {extra_params}')
+        # r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} limit 400 flows 1024 target 5ms tupdate 10ms alpha 3 beta 20 quantum 800 memory_limit 24Mb')
+        # r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} {extra_params} flows 1024 quantum 800 target 3ms interval 70ms memory_limit 24Mb ecn drop_batch 32')
     
     print("Setup qdisc and class", end="\n")
     # r1.cmd(f'r1 tc -s qdisc show dev r1-eth6')
