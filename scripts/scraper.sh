@@ -94,17 +94,66 @@ while [ $a -lt $loops ]
                 min=0
         fi
 
+        # echo "$q_disc"
+
         path="$foldername/$y_axis"
         y_axis=$(echo "$y_axis" | tr _ -)
         q_disc=$(echo "$q_disc" | tr _ -)
-        echo "$y_axis"
+        # echo "$y_axis"
         plot_type="l"
         if [[ $y_axis == *"Quake-loss"* || $y_axis == *"qdisc-stats-dropped"* || $y_axis == *"HTTP latency"* ]]
             then
                 plot_type="p"
         fi
+
+        if [[ $y_axis == *"VoIP-induced-delay"* ]]
+            then
+                if [[ $q_disc == "pfifo" || $q_disc == "codel" || $q_disc == "pie" ]]
+                    then
+                        max=500
+                    else
+                        echo "inside else"
+                        max=100
+                fi
+        fi
+
+        if [[ $y_axis == *"Quake-jitter"* ]]
+            then
+                min=0
+                max=20
+        fi
+
+        if [[ $y_axis == *"Quake-loss"* ]]
+            then
+                min=0
+                max=50
+        fi
+
+        if [[ $y_axis == "TCP upload" ]]
+            then
+                max=12
+        fi
+
+        if [[ $y_axis == "HTTP latency" ]]
+            then
+                max=1400
+        fi
         # gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w l"
-        gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w $plot_type"
+        if [[ $y_axis == "qdisc-stats-dropped" || $y_axis == "qdisc-stats-backlog-pkts" ]]
+            then
+                if [[ $y_axis == "qdisc-stats-backlog-pkts" ]]
+                    then
+                        if [[ $q_disc != "cake" ]]
+                            then
+                                max=500
+                        fi
+                    else
+                        max=250
+                fi
+                gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:(\$$option/2) title '$q_disc' w $plot_type"
+            else
+                gnuplot -e "set terminal png size 400,300; set output '$path.png'; set datafile missing '-1';set xlabel 'Time(s)'; set ylabel '$y_axis'; set xrange [-1:$duration]; set yrange [$min:$max]; set title 'Plot of $y_axis vs Time'; plot 'data.txt' using 1:$option title '$q_disc' w $plot_type"
+        fi
         a=`expr $a + 1`
     done
 
