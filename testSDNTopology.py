@@ -14,6 +14,7 @@ from mininet.topo import Topo
 # Global variable for topology
 net = None
 
+# Topology class
 class SDNAQMTopo(Topo):
     def build(self):
         self.addSwitch('r1', protocols='OpenFlow13')
@@ -24,15 +25,6 @@ class SDNAQMTopo(Topo):
             self.addLink(f's{i}', 'r1', cls=TCLink, bw=100, delay='5ms')
             self.addLink(f'd{i}', 'r2', cls=TCLink, bw=100, delay='5ms')
         self.addLink('r1', 'r2', cls=TCLink, bw=10, delay='40ms')
-
-def getBwString(vInterface) :
-    return f'tc qdisc add dev {vInterface} root handle 1: htb default 10'
-
-def getBwClassString(vInterface, bw) :
-    return f'tc class add dev {vInterface} parent 1: classid 1:10 htb rate {bw}'
-    
-def getDelayString(vInterface, delay) :
-    return f'tc qdisc add dev {vInterface} parent 1:10 handle 10: netem delay {delay}'
 
 def getExp(qdisc, serverProcs, clientProcs, argsDict):
 
@@ -45,7 +37,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
 
     time.sleep(10)
     
-    # Assign IPs to hosts
+    # Assign IPs
     for i in range(1, 6):
         net.get(f's{i}').setIP(f'10.0.0.{i}/8', intf=f's{i}-eth0')
         net.get(f'd{i}').setIP(f'10.2.0.{i}/8', intf=f'd{i}-eth0')
@@ -68,9 +60,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
         # r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} limit 400 flows 1024 target 5ms tupdate 10ms alpha 3 beta 20 quantum 800 memory_limit 24Mb')
         # r1.cmd(f'tc qdisc add dev r1-eth6 parent 10: {qdisc} {extra_params} flows 1024 quantum 800 target 3ms interval 70ms memory_limit 24Mb ecn drop_batch 32')
     
-    print("Setup qdisc and class", end="\n")
-    # r1.cmd(f'r1 tc -s qdisc show dev r1-eth6')
-    # r1.cmd(f'r1 tc -s class show dev r1-eth6')
+    print("Setup AQM done", end="\n")
 
     #Disable offloads on switch interfaces
     for i in range(1, 8) :
@@ -112,7 +102,7 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
     os.mkdir(f'data/{qdisc}/disc_stats')
     os.mkdir(f'data/{qdisc}/tcpdump')
 
-    # Start tcpdump on switch R1
+    # Start tcpdump on ovs switch r1
     tcpdumpcmd = f"tcpdump -i r1-eth6 -w data/{qdisc}/tcpdump/r1_r2.pcap"
     proc = r1.popen(shlex.split(tcpdumpcmd), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     serverProcs['tcpdumpr1r2'] = proc
@@ -132,17 +122,17 @@ def getExp(qdisc, serverProcs, clientProcs, argsDict):
             if name == 'udpBurstClient':
                 proc = host.popen(shlex.split(cmd), stdout=open(f"data/{qdisc}/s5_r1/udpBurstDebug", "w"), stderr=subprocess.DEVNULL)
             elif name == 'qdiscStats':
-                proc = host.popen(shlex.split(cmd), stdout=open(f"client_output.log", "w"), stderr=open(f"client_error.log", "w"))
+                proc = host.popen(shlex.split(cmd), stdout=open(f"client_output.log", "w"), stderr=subprocess.DEVNULL)
             else:
                 proc = host.popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             clientProcs[name] = proc
 
 def runExp(qdisc, argsDict):
-    #serverProcs includes all those processes that will have to be started before clientProcs,
-    #terminate is called directly on these processes after clientProcs have ended
+    # serverProcs includes all the server processes that start before clientProcs,
+    # terminate is called directly on these processes after clientProcs have ended
     serverProcs={}
-    #clientProcs includes all those processes that will be started after corresponding serverProcs have started,
-    #communicate() is called on these processes to wait for them to terminate, except dash client (d6_r2)
+    # clientProcs includes all the processes which are started after serverProcs,
+    # communicate() is called on these processes to wait for them to terminate
     clientProcs={}
     
     os.umask(0)
@@ -151,7 +141,7 @@ def runExp(qdisc, argsDict):
     
     print(f"Waiting for test {qdisc} to complete...")
     for i in clientProcs:
-        if(i != 'dashClient' and i != 'udpBurstClient'):
+        if(i != 'udpBurstClient'):
             clientProcs[i].communicate()
     clientProcs['udpBurstClient'].terminate()
     clientProcs['udpBurstClient'].communicate()
@@ -160,6 +150,7 @@ def runExp(qdisc, argsDict):
         serverProcs[i].terminate()
         serverProcs[i].communicate()
 
+# Read configurable parameters
 def readConfig() :
     configParser = configparser.ConfigParser()
     configParser.optionxform = str
