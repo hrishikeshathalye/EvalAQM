@@ -1,7 +1,7 @@
 #!/bin/bash
 
 filename=$1
-type=$2 # 1 for others, 2 for dash
+type=$2
 datafile="datafile.py"
 outfile="out.txt"
 data="data.txt"
@@ -36,12 +36,6 @@ if [ $type == 1 ]
             then
                 rm -r $foldername
         fi
-    else
-        foldername="dash"
-        if [ -d "$foldername" ]
-            then
-                rm -r $foldername
-        fi
 fi
 mkdir $foldername
 
@@ -61,12 +55,7 @@ cat "$filename" >> "$datafile"
 
 
 touch $outfile
-if [ $type == 1 ]
-    then
-        python3 scraper.py $foldername $q_disc
-    else
-        python3 dashscrapper.py $filename
-fi
+python3 scraper.py $foldername $q_disc
 loops=$?
 
 a=0
@@ -94,12 +83,9 @@ while [ $a -lt $loops ]
                 min=0
         fi
 
-        # echo "$q_disc"
-
         path="$foldername/$y_axis"
         y_axis=$(echo "$y_axis" | tr _ -)
         q_disc=$(echo "$q_disc" | tr _ -)
-        # echo "$y_axis"
         plot_type="l"
         if [[ $y_axis == *"Quake-loss"* || $y_axis == *"qdisc-stats-dropped"* || $y_axis == *"HTTP latency"* ]]
             then
@@ -112,7 +98,6 @@ while [ $a -lt $loops ]
                     then
                         max=500
                     else
-                        echo "inside else"
                         max=100
                 fi
         fi

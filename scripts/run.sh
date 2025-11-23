@@ -51,14 +51,7 @@ do
 done
 
 it=1
-# for i in "${q_discs[@]}"
-# do
-#     direc="$graph_dir""/$i"
-#     "$script" "../data/$i/d6_r2/dash_$i" 2 $direc $i $1
-#     mul=`expr 3 \* $it`
-#     echo -ne "Generating Graphs: `expr 79 + $mul`%"\\r
-#     it=`expr $it + 1`
-# done
+
 echo "Generating Graphs: 100%"
 
 echo "Completed"
